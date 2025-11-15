@@ -1,5 +1,12 @@
 # CS-125-Project
-Our final project for CS-125 Database Design Fall 2025
+### Our final project for CS-125 Database Design Fall 2025
+
+---
+
+## Authors
+- ### Andrew Krahn
+- ### Brevin Tating
+---
 # Youth Group Ministry
 
 A full-stack event, attendance, and leadership management system designed for youth ministries.  
