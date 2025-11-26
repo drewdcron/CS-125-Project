@@ -132,3 +132,5 @@ INSERT INTO PermissionWaiver (YouthID, PersonID, DocumentType, DateSigned, DateE
 INSERT INTO PermissionWaiverEvent (EventID, PermissionWaiverID, IsRequired) VALUES
 (1, 1, TRUE),
 (1, 2, TRUE);
+
+select * from Person

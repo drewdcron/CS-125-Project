@@ -10,7 +10,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       # Persist data so it doesn't vanish when container stops
       - db_data:/var/lib/mysql
@@ -18,8 +18,8 @@ services:
       # AUTOMATIC INIT: Maps SQL files to the startup folder.
       # Docker executes .sql files here in alphabetical order.
       # Prefix with numbers to ensure schema runs before data.
-      - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
-      - ./data.sql:/docker-entrypoint-initdb.d/02_data.sql
+      - ./sql_files/YGMSSchema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./sql_files/YGMSData.sql:/docker-entrypoint-initdb.d/02_data.sql
   mongo:
     image: mongo:latest
     container_name: ygms-mongo
@@ -45,6 +45,12 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MONGO_URL: mongodb://mongo:27017/ygms_mongo_db
+
+  redis:
+    image: redis:alpine
+    container_name: ygms-redis
+    ports:
+        - "6379:6379"
 
 volumes:
   db_data:

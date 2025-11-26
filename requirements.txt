@@ -4,5 +4,7 @@ sqlalchemy
 pymysql
 pydantic
 pydantic-settings
-python-dotenv
 pymongo
+redis>=4.6.0
+cryptography
+strawberry-graphql[fastapi]

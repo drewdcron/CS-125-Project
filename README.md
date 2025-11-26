@@ -94,6 +94,66 @@ Built to support youth leaders, volunteers, parents/guardians, and students ages
 
 ---
 
-##  Suggested Repository Structure
-- TBD
+## Architecture
+
+* **MySQL:** Stores student roster (Relational Data).
+* **MongoDB:** Stores meeting notes (Document Data).
+* **Redis:** Stores live check-in status (Key-Value Data).
+* **GraphQL (Strawberry):** Unified API layer.
+
+## How to Run
+
+### 1. Prerequisites
+- Docker Desktop (running)
+- Python 3.10+
+
+
+### 2. Start Databases (Docker)
+Ensure Docker Desktop is running, then start the database containers:
+```bash
+docker-compose up -d db mongo redis
+```
+
+### 3. Setup & Run Backend:
+Install the required dependencies from the requirements file:
+```bash
+pip install -r requirements.txt
+```
+
+Start the FastAPI server:
+```bash
+python main.py
+```
+### 4. Test API:
+
+#### Option A: Interactive Dashboard (Frontend)
+Simply open the `frontend.html` file in your web browser.
+* It connects automatically to the API.
+* You can view the roster (**MySQL**) and perform live check-ins (**Redis**).
+
+#### Option B: Built-in GraphiQL Interface
+Test using Insomnia or built-in GraphiQL interface
+- URL: http://127.0.0.1:8005/graphql
+- Method: POST
+
+Sample Query (Reads from MySQL & Redis):
+
+```bash
+query {
+  people {
+    id
+    name
+  }
+  checkinStatus(userId: 1) {
+    status
+  }
+}
+```
+
+Sample Mutation (Writes to Redis):
+```bash
+mutation {
+  check_in_user(userId: 1)
+}
+```
 
