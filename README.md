@@ -106,6 +106,21 @@ Built to support youth leaders, volunteers, parents/guardians, and students ages
 ### 1. Prerequisites
 - Docker Desktop (running)
 - Python 3.10+
+- A .env file that includes all MySQL and Redis information needed
+```bash
+# MYSQL Information
+MYSQL_USER = user
+MYSQL_PASSWORD = password
+MYSQL_HOST = host
+MYSQL_PORT = port
+MYSQL_DATABASE = database
+
+# Redis Information
+REDIS_HOST= host
+REDIS_PORT= port
+REDIS_PASSWORD = password
+REDIS_USER = user
+```
 
 
 ### 2. Start Databases (Docker)
