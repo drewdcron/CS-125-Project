@@ -18,6 +18,15 @@ class Query:
             db.close()
 
     @strawberry.field
+    def events(self) -> List[EventType]:
+        db = SessionLocal()
+        try:
+            events_orm = db.query(EventORM).all()
+            return [EventType(id=e.ID, name=e.Name, status=e.Status, date=e.Date) for e in events_orm]
+        finally:
+            db.close()
+
+    @strawberry.field
     def event_attendees(self, event_id: int) -> List[int]:
         if not redis_client: return []
         key = f"event:{event_id}:checkedIn"

@@ -12,3 +12,5 @@ venv/
 .vscode/
 .idea/
 ._*
+
+graphql_test_cases.txt

@@ -30,6 +30,31 @@ class Mutation:
             db.close()
 
     @strawberry.mutation
+    def delete_event_type(self, name: str) -> str:
+        db = SessionLocal()
+        try:
+            event_type_to_delete = db.query(EventTypeORM).filter(EventTypeORM.Name == name).first()
+            if not event_type_to_delete:
+                db.close()
+                return f"Event Type '{name}' not found."
+
+            type_id = event_type_to_delete.ID
+
+            # First, delete the associated schema from MongoDB
+            mongo_db["event_types"].delete_one({"type_id": type_id})
+
+            # Then, delete the record from MySQL
+            db.delete(event_type_to_delete)
+            db.commit()
+
+            return f"Successfully deleted Event Type '{name}' (ID: {type_id})."
+        except Exception as e:
+            db.rollback()
+            return f"Error: {str(e)}"
+        finally:
+            db.close()
+
+    @strawberry.mutation
     def update_event_type_schema(self, type_id: int, schema_json: str) -> str:
         try:
             updates = {"$set": {"fields": json.loads(schema_json)}}
@@ -106,3 +131,41 @@ class Mutation:
         db.commit()
         db.close()
         return f"Event closed. Moved {count} attendees from Redis to MySQL."
+
+    @strawberry.mutation
+    def create_event(self, name: str, description: str, date: str, location: str) -> EventORM:
+        db = SessionLocal()
+        try:
+            new_event = EventORM(
+                Name=name,
+                Description=description,
+                Date=date,
+                Location=location,
+                Status="UPCOMING"
+            )
+            db.add(new_event)
+            db.commit()
+            db.refresh(new_event)
+            return new_event
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+
+    @strawberry.mutation
+    def check_in_by_name(self, event_id: int, name: str) -> str:
+        db = SessionLocal()
+        try:
+            person = db.query(PersonORM).filter(PersonORM.Name == name).first()
+            if not person:
+                return "User not found"
+            
+            if not redis_client:
+                return "Redis Error"
+
+            key = f"event:{event_id}:checkedIn"
+            redis_client.sadd(key, person.ID)
+            return f"Youth {person.ID} checked into Event {event_id}."
+        finally:
+            db.close()

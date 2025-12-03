@@ -19,6 +19,8 @@ class EventORM(Base):
     ID = Column(Integer, primary_key=True, index=True)
     # Ensure this matches your SQL schema columns
     Name = Column(String(255))
+    Description = Column(String(1000))
+    Location = Column(String(255))
     Date = Column(String(50))
     Status = Column(String(50), default="PLANNED") # <--- The new column
 

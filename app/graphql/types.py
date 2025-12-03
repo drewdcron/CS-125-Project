@@ -1,5 +1,6 @@
 from typing import List, Optional
 import strawberry
+from strawberry.scalars import JSON
 import json
 from app.db.mongo import mongo_db
 
@@ -17,7 +18,9 @@ class CustomField:
 @strawberry.type
 class EventType:
     id: int
-    name: str
+    name: Optional[str]
+    description: Optional[str]
+    location: Optional[str]
     status: str
     date: str
 
@@ -34,7 +37,7 @@ class EventTypeSchema:
     name: str
     
     @strawberry.field
-    def fields(self) -> strawberry.JSON:
+    def fields(self) -> JSON:
         doc = mongo_db["event_types"].find_one({"type_id": self.id})
         if doc and "fields" in doc:
             return doc["fields"]

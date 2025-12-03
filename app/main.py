@@ -31,7 +31,7 @@ def read_root():
 
 @app.get("/frontend", response_class=HTMLResponse)
 def serve_frontend():
-    with open("../frontend.html", "r", encoding="utf-8") as f:
+    with open("frontend.html", "r", encoding="utf-8") as f:
         return f.read()
 
 if __name__ == "__main__":
