@@ -2,186 +2,149 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YGMS | Leader Dashboard</title>
+  <title>YGMS Event Dashboard</title>
   <style>
-    :root {
-      --primary: #5c7cfa;
-      --bg: #f8f9fa;
-      --card-bg: #ffffff;
-      --text: #333;
-    }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
 
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 0;
-    }
+    .container { display: grid; grid-template-columns: 300px 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
+    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; color: #444; border-bottom: 2px solid #5c7cfa; padding-bottom: 10px; }
 
-    /* Header Styling */
-    header {
-      background: var(--primary);
-      color: white;
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
+    input { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+    button.action-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 5px; }
+    button.action-btn:hover { background: #4263eb; }
 
-    h1 { margin: 0; font-size: 1.5rem; }
+    /* Roster Grid */
+    .roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+    .student-card { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
 
-    /* Dashboard Grid */
-    .container {
-      max-width: 1200px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-      display: grid;
-      grid-template-columns: 2fr 1fr; /* Two columns */
-      gap: 2rem;
-    }
+    /* Dynamic Buttons */
+    .btn-checkin { background: #ccc; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; color: #333; font-weight: bold; }
+    .btn-checkin:hover { opacity: 0.8; }
 
-    /* Cards */
-    .card {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-
-    .card h2 { margin-top: 0; color: var(--primary); font-size: 1.2rem; border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
-
-    /* List Styles */
-    ul { list-style: none; padding: 0; }
-    li {
-      padding: 0.8rem;
-      border-bottom: 1px solid #f0f0f0;
-      display: flex;
-      justify-content: space-between;
-    }
-    li:last-child { border-bottom: none; }
-
-    /* Buttons & Status */
-    .status-badge {
-      background: #e6fcf5;
-      color: #0ca678;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: bold;
-    }
-
-    .status-missing {
-      background: #fff5f5;
-      color: #fa5252;
-    }
-
-    button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 1rem;
-      margin-top: 1rem;
-    }
-    button:hover { opacity: 0.9; }
-
+    .status-in { background: #20c997; color: white; cursor: default; } /* Green */
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>Youth Group Management</h1>
-    <span>Logged in as: <strong>Admin</strong></span>
-  </header>
-
   <div class="container">
 
-    <div class="card">
-      <h2>👥 Student Roster (MySQL)</h2>
-      <p>Loaded from relational database.</p>
-      <ul id="roster-list">
-        <li>Loading roster...</li>
-      </ul>
+    <div>
+      <div class="card">
+        <h2>📅 Event Controls</h2>
+        <label><strong>Current Event ID:</strong></label>
+        <input type="number" id="eventId" value="101">
+        <button class="action-btn" onclick="refreshDashboard()">Load Event Data</button>
+      </div>
+
+      <br>
+
+      <div class="card">
+        <h2>✨ New Event Type</h2>
+        <input type="text" id="typeName" placeholder="Name (e.g. Retreat)">
+        <button class="action-btn" onclick="createEventType()">Save to Mongo/MySQL</button>
+        <p id="createMsg" style="font-size:0.8rem; color:green;"></p>
+      </div>
     </div>
 
     <div class="card">
-      <h2>🔴 Live Check-In (Redis)</h2>
-      <p>Real-time attendance status.</p>
-
-      <div id="checkin-display">
-        <h3>User ID: 1</h3>
-        <p>Status: <span id="status-badge" class="status-badge status-missing">Checking...</span></p>
-      </div>
-
-      <button onclick="refreshData()">Refresh Dashboard</button>
+      <h2>👥 Live Check-In Roster</h2>
+      <p>Click a button to check a student into Event <span id="displayEventId">101</span>.</p>
+      <div id="roster" class="roster-grid">Loading...</div>
     </div>
 
   </div>
 
   <script>
-    // This is the URL of your backend
-    const API_URL = "http://127.0.0.1:8005/graphql";
+    const API_URL = "/graphql";
 
-    async function refreshData() {
-      const rosterList = document.getElementById('roster-list');
-      const statusBadge = document.getElementById('status-badge');
+    // 1. Fetch data from API
+    async function sendGQL(query) {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query })
+      });
+      return await response.json();
+    }
 
-      // 1. The GraphQL Query (Asks for MySQL data AND Redis data)
+    // 2. Main Refresh Logic
+    async function refreshDashboard() {
+      const eventId = document.getElementById('eventId').value;
+      document.getElementById('displayEventId').innerText = eventId;
+      const rosterDiv = document.getElementById('roster');
+
+      // Query: Get All People (MySQL) AND Get List of Checked-In IDs (Redis)
       const query = `
         query {
-          people {
-            id
-            name
-            email
-          }
-          checkinStatus(userId: 1) {
-            status
-          }
+          people { id name }
+          eventAttendees(eventId: ${eventId})
         }
       `;
 
       try {
-        // 2. Fetch data from your backend
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: query })
+        const result = await sendGQL(query);
+        const people = result.data.people;
+        const attendees = result.data.eventAttendees; // Array of IDs [1, 5, ...]
+
+        rosterDiv.innerHTML = '';
+
+        people.forEach(p => {
+          // Check if this person's ID exists in the Redis array
+          const isCheckedIn = attendees.includes(p.id);
+
+          // Style button based on status
+          const btnClass = isCheckedIn ? "btn-checkin status-in" : "btn-checkin";
+          const btnText = isCheckedIn ? "✅ Checked In" : "Check In";
+          const action = isCheckedIn ? "" : `onclick="checkIn(${p.id})"`;
+
+          const html = `
+            <div class="student-card">
+              <div>
+                <strong>${p.name}</strong><br>
+                <small>ID: ${p.id}</small>
+              </div>
+              <button class="${btnClass}" ${action}>${btnText}</button>
+            </div>
+          `;
+          rosterDiv.innerHTML += html;
         });
 
-        const result = await response.json();
-        const data = result.data;
-
-        // 3. Update Roster (MySQL Data)
-        rosterList.innerHTML = '';
-        data.people.forEach(person => {
-          const li = document.createElement('li');
-          li.innerHTML = `<span><strong>${person.name}</strong></span> <span style="color:#888">${person.email || 'No Email'}</span>`;
-          rosterList.appendChild(li);
-        });
-
-        // 4. Update Status (Redis Data)
-        statusBadge.textContent = data.checkinStatus.status;
-
-        // Change color based on status
-        if(data.checkinStatus.status === "Checked In") {
-            statusBadge.className = "status-badge";
-        } else {
-            statusBadge.className = "status-badge status-missing";
-        }
-
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        rosterList.innerHTML = `<li style="color:red">Error connecting to server. Is main.py running?</li>`;
+      } catch (e) {
+        console.error(e);
+        rosterDiv.innerHTML = "Error loading data.";
       }
     }
 
-    // Load data automatically when page opens
-    window.onload = refreshData;
+    // 3. Mutation: Check In (Redis)
+    async function checkIn(studentId) {
+      const eventId = document.getElementById('eventId').value;
+      const mutation = `
+        mutation {
+          checkInToEvent(eventId: ${eventId}, studentId: ${studentId})
+        }
+      `;
+      await sendGQL(mutation);
+      refreshDashboard(); // Reload to turn button green
+    }
+
+    // 4. Mutation: Create Event Type (Mongo)
+    async function createEventType() {
+      const name = document.getElementById('typeName').value;
+      // Hardcoded schema for demo
+      const schema = JSON.stringify([{ "field": "notes", "type": "text" }]);
+
+      const mutation = `
+        mutation {
+          createEventType(name: "${name}", schemaJson: ${JSON.stringify(schema)})
+        }
+      `;
+      const res = await sendGQL(mutation);
+      document.getElementById('createMsg').innerText = res.data.createEventType;
+    }
+
+    // Load on start
+    refreshDashboard();
   </script>
 </body>
 </html>
