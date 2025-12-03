@@ -2,9 +2,13 @@ import json
 from datetime import datetime
 import strawberry
 from app.db.mysql import SessionLocal
-from app.models.sql_models import EventTypeORM, EventORM, AttendanceLogORM
+from app.models.sql_models import EventTypeORM, EventORM, AttendanceLogORM, PersonORM
 from app.db.mongo import mongo_db
 from app.db.redis_db import redis_client
+
+# CRITICAL FIX 1: Import the Strawberry Type, not just the ORM model
+from app.graphql.types import EventType
+
 
 @strawberry.type
 class Mutation:
@@ -39,11 +43,7 @@ class Mutation:
                 return f"Event Type '{name}' not found."
 
             type_id = event_type_to_delete.ID
-
-            # First, delete the associated schema from MongoDB
             mongo_db["event_types"].delete_one({"type_id": type_id})
-
-            # Then, delete the record from MySQL
             db.delete(event_type_to_delete)
             db.commit()
 
@@ -92,6 +92,15 @@ class Mutation:
     @strawberry.mutation
     def check_in_user(self, event_id: int, youth_id: int) -> str:
         if not redis_client: return "Redis Error"
+
+        # VALIDATION: Check user exists in SQL before adding to Redis
+        db = SessionLocal()
+        person = db.query(PersonORM).filter(PersonORM.ID == youth_id).first()
+        db.close()
+
+        if not person:
+            return f"Error: Youth ID {youth_id} does not exist."
+
         key = f"event:{event_id}:checkedIn"
         redis_client.sadd(key, youth_id)
         return f"Youth {youth_id} checked into Event {event_id}."
@@ -107,33 +116,44 @@ class Mutation:
     def close_event(self, event_id: int) -> str:
         db = SessionLocal()
         event = db.query(EventORM).filter(EventORM.ID == event_id).first()
-        
+
         if not event or event.Status != "OPEN":
             db.close()
             return "Cannot close: Event not found or not open."
 
         key = f"event:{event_id}:checkedIn"
         attendees = redis_client.smembers(key)
-        
+
         count = 0
-        for youth_id in attendees:
-            log = AttendanceLogORM(
-                EventID=event_id,
-                YouthID=int(youth_id),
-                CheckInTime=str(datetime.now()) # Using current time as flush time
-            )
-            db.add(log)
-            count += 1
+        try:
+            for youth_id in attendees:
+                # Prevent duplicate logs
+                exists = db.query(AttendanceLogORM).filter_by(EventID=event_id, YouthID=int(youth_id)).first()
+                if not exists:
+                    log = AttendanceLogORM(
+                        EventID=event_id,
+                        YouthID=int(youth_id),
+                        CheckInTime=str(datetime.now())
+                    )
+                    db.add(log)
+                    count += 1
 
-        redis_client.delete(key)
-        event.Status = "CLOSED"
-        
-        db.commit()
-        db.close()
-        return f"Event closed. Moved {count} attendees from Redis to MySQL."
+            event.Status = "CLOSED"
+            db.commit()  # SAFETY: Commit to SQL *before* deleting from Redis
 
+            # Now safe to delete
+            redis_client.delete(key)
+            return f"Event closed. Moved {count} attendees from Redis to MySQL."
+
+        except Exception as e:
+            db.rollback()
+            return f"Error closing event: {str(e)}"
+        finally:
+            db.close()
+
+    # CRITICAL FIX 2: Return EventType (Strawberry), NOT EventORM (SQLAlchemy)
     @strawberry.mutation
-    def create_event(self, name: str, description: str, date: str, location: str) -> EventORM:
+    def create_event(self, name: str, description: str, date: str, location: str) -> EventType:
         db = SessionLocal()
         try:
             new_event = EventORM(
@@ -146,7 +166,16 @@ class Mutation:
             db.add(new_event)
             db.commit()
             db.refresh(new_event)
-            return new_event
+
+            # CRITICAL FIX 3: Manually map the ORM object to the Strawberry Type
+            return EventType(
+                id=new_event.ID,
+                name=new_event.Name,
+                description=new_event.Description,
+                location=new_event.Location,
+                status=new_event.Status,
+                date=new_event.Date
+            )
         except Exception as e:
             db.rollback()
             raise e
@@ -160,7 +189,7 @@ class Mutation:
             person = db.query(PersonORM).filter(PersonORM.Name == name).first()
             if not person:
                 return "User not found"
-            
+
             if not redis_client:
                 return "Redis Error"
 

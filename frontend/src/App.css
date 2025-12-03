@@ -1,0 +1,112 @@
+:root {
+  --color-primary: hsl(198, 28%, 34%); /* Dark Blue-Grey */
+  --color-accent: hsl(13, 66%, 64%);  /* Warm Orange */
+  --color-footer-bg: #193441;
+  --font-sans-serif: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --banner-bg-color: #0693e3;
+  --banner-text-color: #ffffff;
+}
+
+body {
+  font-family: "Lato", sans-serif;
+  background-color: #f8f9fa;
+  color: #212529;
+  line-height: 1.8;
+}
+
+.navbar-custom {
+  background-color: var(--banner-bg-color);
+  font-family: "Lato", sans-serif;
+}
+
+.navbar-custom .navbar-brand,
+.navbar-custom .nav-link {
+  color: var(--banner-text-color);
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.navbar-custom .nav-link:hover {
+  color: var(--banner-text-color);
+  opacity: 0.8;
+}
+
+.App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex-grow: 1;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-primary);
+  font-weight: 300;
+}
+
+/* Override Bootstrap button colors */
+.btn-primary {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.btn-primary:hover {
+  background-color: hsl(13, 66%, 54%);
+  border-color: hsl(13, 66%, 54%);
+}
+
+.btn-outline-primary {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.btn-outline-primary:hover {
+  color: #fff;
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+a {
+    color: var(--color-accent);
+}
+
+a:hover {
+    color: hsl(13, 66%, 54%);
+}
+
+.navbar-brand {
+    color: var(--color-primary);
+    font-weight: bold;
+}
+
+
+
+.footer {
+
+  background-color: var(--color-footer-bg);
+
+  color: white;
+
+  padding: 2rem 0;
+
+  margin-top: auto;
+
+}
+
+
+
+.event-card {
+
+  margin-bottom: 1.5rem;
+
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  padding: 1.5rem;
+
+  border-radius: 0.25rem;
+
+}

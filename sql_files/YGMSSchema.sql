@@ -79,6 +79,7 @@ CREATE TABLE Event (
     Date DATE NOT NULL,
     Time TIME,
     Location VARCHAR(255),
+    Description VARCHAR(255),
     IsCancelled BOOLEAN DEFAULT FALSE,
     MaxCapacity INT -- Important for managing RSVPs and logistics
 );

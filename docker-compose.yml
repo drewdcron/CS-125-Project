@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   # Service 1: The MySQL Database
   db:
@@ -8,16 +10,18 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
     ports:
-      - "3307:3306"
+      - "3306:3306"
     volumes:
-      # Persist data so it doesn't vanish when container stops
       - db_data:/var/lib/mysql
-
-      # AUTOMATIC INIT: Maps SQL files to the startup folder.
-      # Docker executes .sql files here in alphabetical order.
-      # Prefix with numbers to ensure schema runs before data.
       - ./sql_files/YGMSSchema.sql:/docker-entrypoint-initdb.d/01_schema.sql
       - ./sql_files/YGMSData.sql:/docker-entrypoint-initdb.d/02_data.sql
+    # HEALTHCHECK: Ensures DB is ready before backend starts
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-p${MYSQL_PASSWORD}"]
+      timeout: 20s
+      retries: 10
+
+  # Service 2: MongoDB
   mongo:
     image: mongo:latest
     container_name: ygms-mongo
@@ -27,31 +31,38 @@ services:
     volumes:
       - mongo_data:/data/db
 
+  # Service 3: Redis
+  redis:
+    image: redis:alpine
+    container_name: ygms-redis
+    ports:
+      - "6379:6379"
+
+  # Service 4: The FastAPI Backend
   backend:
     build: .
     container_name: ygms-backend
-    restart: always
+    restart: on-failure
     ports:
       - "8000:8000"
     depends_on:
-      - db
-      - mongo
-      - redis
+      db:
+        condition: service_healthy # Waits for the healthcheck above!
+      mongo:
+        condition: service_started
+      redis:
+        condition: service_started
     environment:
-      # OVERRIDE the localhost setting for Docker networking
+      # NETWORK CONFIGURATION
+      # We use the internal port (3306), not the external mapped port (3307)
       MYSQL_HOST: db
       MYSQL_PORT: 3306
       MYSQL_USER: root
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
+
       MONGO_HOST: mongo
       REDIS_HOST: redis
-
-  redis:
-    image: redis:alpine
-    container_name: ygms-redis
-    ports:
-        - "6379:6379"
 
 volumes:
   db_data:
