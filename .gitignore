@@ -6,7 +6,7 @@ __pycache__/
 venv/
 
 # Environment Variables
-.env
+Secrets/.env
 
 # IDE settings (optional)
 .vscode/

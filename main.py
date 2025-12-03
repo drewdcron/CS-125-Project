@@ -21,7 +21,7 @@ import uvicorn
 #  CONFIGURATION
 # ==========================================
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file="Secrets/.env", extra="ignore")
 
     # MySQL
     MYSQL_USER: str = "root"
