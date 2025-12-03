@@ -2,186 +2,186 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YGMS | Leader Dashboard</title>
+  <title>YGMS Event Dashboard</title>
   <style>
-    :root {
-      --primary: #5c7cfa;
-      --bg: #f8f9fa;
-      --card-bg: #ffffff;
-      --text: #333;
-    }
-
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 0;
-    }
-
-    /* Header Styling */
-    header {
-      background: var(--primary);
-      color: white;
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    h1 { margin: 0; font-size: 1.5rem; }
-
-    /* Dashboard Grid */
-    .container {
-      max-width: 1200px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-      display: grid;
-      grid-template-columns: 2fr 1fr; /* Two columns */
-      gap: 2rem;
-    }
-
-    /* Cards */
-    .card {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-
-    .card h2 { margin-top: 0; color: var(--primary); font-size: 1.2rem; border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
-
-    /* List Styles */
-    ul { list-style: none; padding: 0; }
-    li {
-      padding: 0.8rem;
-      border-bottom: 1px solid #f0f0f0;
-      display: flex;
-      justify-content: space-between;
-    }
-    li:last-child { border-bottom: none; }
-
-    /* Buttons & Status */
-    .status-badge {
-      background: #e6fcf5;
-      color: #0ca678;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: bold;
-    }
-
-    .status-missing {
-      background: #fff5f5;
-      color: #fa5252;
-    }
-
-    button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 1rem;
-      margin-top: 1rem;
-    }
-    button:hover { opacity: 0.9; }
-
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+    .container { display: grid; grid-template-columns: 350px 1fr; gap: 20px; max-width: 1400px; margin: 0 auto; }
+    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; color: #444; border-bottom: 2px solid #5c7cfa; padding-bottom: 10px; }
+    input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
+    button.action-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 5px; margin-bottom: 5px; }
+    button.action-btn:hover { background: #4263eb; }
+    button.secondary-btn { background: #6c757d; }
+    button.secondary-btn:hover { background: #5a6268; }
+    .roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+    .student-card { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .btn-checkin { background: #17a2b8; color: white; }
+    .btn-checkout { background: #dc3545; color: white; }
+    .status-in { background: #28a745; cursor: default; }
+    .status-pill { padding: 5px 10px; border-radius: 20px; color: white; font-weight: bold; font-size: 0.9em; }
+    .status-open { background: #28a745; }
+    .status-closed { background: #dc3545; }
+    .status-planned { background: #ffc107; color: #333 }
+    #json-display { background: #e9ecef; padding: 10px; border-radius: 5px; white-space: pre-wrap; font-family: monospace; }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>Youth Group Management</h1>
-    <span>Logged in as: <strong>Admin</strong></span>
-  </header>
-
   <div class="container">
-
-    <div class="card">
-      <h2>👥 Student Roster (MySQL)</h2>
-      <p>Loaded from relational database.</p>
-      <ul id="roster-list">
-        <li>Loading roster...</li>
-      </ul>
-    </div>
-
-    <div class="card">
-      <h2>🔴 Live Check-In (Redis)</h2>
-      <p>Real-time attendance status.</p>
-
-      <div id="checkin-display">
-        <h3>User ID: 1</h3>
-        <p>Status: <span id="status-badge" class="status-badge status-missing">Checking...</span></p>
+    <div>
+      <div class="card">
+        <h2>📅 Event Controls</h2>
+        <label><strong>Event ID:</strong></label>
+        <input type="number" id="eventId" value="1">
+        <button class="action-btn" onclick="refreshDashboard()">Load Event Data</button>
+        <hr>
+        <p>Status: <span id="eventStatus" class="status-pill status-planned">LOADING...</span></p>
+        <p>Live Attendees: <strong id="attendeeCount">0</strong></p>
+        <button class="action-btn" onclick="openEvent()">Open Event for Check-In</button>
+        <button class="action-btn secondary-btn" onclick="closeEvent()">Close Event & Save Attendance</button>
+        <p id="eventMsg" style="font-size:0.8rem; color:green;"></p>
       </div>
 
-      <button onclick="refreshData()">Refresh Dashboard</button>
+      <br>
+
+      <div class="card">
+        <h2>✨ Event Types & Custom Data</h2>
+        <input type="text" id="typeName" placeholder="New Event Type Name">
+        <textarea id="typeSchema" placeholder='e.g., [{"name": "T-Shirt Size", "type": "string"}]' rows="3"></textarea>
+        <button class="action-btn" onclick="createEventType()">Create New Event Type</button>
+        <p id="createMsg" style="font-size:0.8rem; color:green;"></p>
+        <hr>
+        <input type="number" id="eventTypeId" placeholder="Event Type ID to View">
+        <button class="action-btn" onclick="getEventTypeSchema()">Get Type Schema</button>
+        <div id="json-display"></div>
+      </div>
     </div>
 
+    <div class="card">
+      <h2>👥 Live Check-In Roster</h2>
+      <p>Event <span id="displayEventId">1</span></p>
+      <div id="roster" class="roster-grid">Loading...</div>
+    </div>
   </div>
 
   <script>
-    // This is the URL of your backend
-    const API_URL = "http://127.0.0.1:8005/graphql";
+    const API_URL = "/graphql";
 
-    async function refreshData() {
-      const rosterList = document.getElementById('roster-list');
-      const statusBadge = document.getElementById('status-badge');
+    async function sendGQL(query) {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query })
+      });
+      return await response.json();
+    }
 
-      // 1. The GraphQL Query (Asks for MySQL data AND Redis data)
+    async function refreshDashboard() {
+      const eventId = document.getElementById('eventId').value;
+      document.getElementById('displayEventId').innerText = eventId;
+      const rosterDiv = document.getElementById('roster');
+
       const query = `
         query {
-          people {
-            id
-            name
-            email
-          }
-          checkinStatus(userId: 1) {
-            status
-          }
+          people { id name }
+          event(eventId: ${eventId}) { id name status }
+          eventAttendees(eventId: ${eventId})
+          eventAttendeeCount(eventId: ${eventId})
         }
       `;
 
       try {
-        // 2. Fetch data from your backend
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: query })
-        });
+        const result = await sendGQL(query);
+        const people = result.data.people;
+        const event = result.data.event;
+        const attendees = result.data.eventAttendees;
+        const attendeeCount = result.data.eventAttendeeCount;
 
-        const result = await response.json();
-        const data = result.data;
-
-        // 3. Update Roster (MySQL Data)
-        rosterList.innerHTML = '';
-        data.people.forEach(person => {
-          const li = document.createElement('li');
-          li.innerHTML = `<span><strong>${person.name}</strong></span> <span style="color:#888">${person.email || 'No Email'}</span>`;
-          rosterList.appendChild(li);
-        });
-
-        // 4. Update Status (Redis Data)
-        statusBadge.textContent = data.checkinStatus.status;
-
-        // Change color based on status
-        if(data.checkinStatus.status === "Checked In") {
-            statusBadge.className = "status-badge";
+        document.getElementById('attendeeCount').innerText = attendeeCount;
+        const statusPill = document.getElementById('eventStatus');
+        if (event) {
+            statusPill.innerText = event.status;
+            statusPill.className = 'status-pill';
+            statusPill.classList.add(`status-${event.status.toLowerCase()}`);
         } else {
-            statusBadge.className = "status-badge status-missing";
+            statusPill.innerText = "NOT FOUND";
+            statusPill.className = 'status-pill status-closed';
         }
 
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        rosterList.innerHTML = `<li style="color:red">Error connecting to server. Is main.py running?</li>`;
+
+        rosterDiv.innerHTML = '';
+        people.forEach(p => {
+          const isCheckedIn = attendees.includes(p.id);
+          const button = isCheckedIn
+            ? `<button class="btn-checkout" onclick="checkOut(${p.id})">Check Out</button>`
+            : `<button class="btn-checkin" onclick="checkIn(${p.id})">Check In</button>`;
+
+          const html = `
+            <div class="student-card ${isCheckedIn ? 'status-in' : ''}">
+              <div><strong>${p.name}</strong><br><small>ID: ${p.id}</small></div>
+              ${button}
+            </div>
+          `;
+          rosterDiv.innerHTML += html;
+        });
+
+      } catch (e) {
+        console.error(e);
+        rosterDiv.innerHTML = "Error loading data.";
       }
     }
 
-    // Load data automatically when page opens
-    window.onload = refreshData;
+    async function checkIn(youthId) {
+      const eventId = document.getElementById('eventId').value;
+      const mutation = `mutation { check_in_user(eventId: ${eventId}, youthId: ${youthId}) }`;
+      await sendGQL(mutation);
+      refreshDashboard();
+    }
+
+    async function checkOut(youthId) {
+      const eventId = document.getElementById('eventId').value;
+      const mutation = `mutation { check_out_user(eventId: ${eventId}, youthId: ${youthId}) }`;
+      await sendGQL(mutation);
+      refreshDashboard();
+    }
+
+    async function openEvent() {
+        const eventId = document.getElementById('eventId').value;
+        const mutation = `mutation { open_event(eventId: ${eventId}) }`;
+        const res = await sendGQL(mutation);
+        document.getElementById('eventMsg').innerText = res.data.open_event;
+        refreshDashboard();
+    }
+
+    async function closeEvent() {
+        const eventId = document.getElementById('eventId').value;
+        const mutation = `mutation { close_event(eventId: ${eventId}) }`;
+        const res = await sendGQL(mutation);
+        document.getElementById('eventMsg').innerText = res.data.close_event;
+        refreshDashboard();
+    }
+
+    async function createEventType() {
+      const name = document.getElementById('typeName').value;
+      const schema = document.getElementById('typeSchema').value;
+      const mutation = `mutation { create_event_type(name: "${name}", schemaJson: ${JSON.stringify(schema)}) }`;
+      const res = await sendGQL(mutation);
+      document.getElementById('createMsg').innerText = res.data.create_event_type;
+    }
+
+    async function getEventTypeSchema() {
+        const typeId = document.getElementById('eventTypeId').value;
+        const query = `query { event_type_schema(typeId: ${typeId}) { id name fields } }`;
+        const res = await sendGQL(query);
+        const schema = res.data.event_type_schema;
+        if (schema) {
+            document.getElementById('json-display').innerText = JSON.stringify(schema.fields, null, 2);
+        } else {
+            document.getElementById('json-display').innerText = "Schema not found.";
+        }
+    }
+
+    window.onload = refreshDashboard;
   </script>
 </body>
 </html>

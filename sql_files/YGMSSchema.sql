@@ -75,6 +75,7 @@ CREATE TABLE MedicalInfo (
 -- Event (Super-type Entity)
 CREATE TABLE Event (
     ID INT PRIMARY KEY AUTO_INCREMENT,
+    Name VARCHAR(255),
     Date DATE NOT NULL,
     Time TIME,
     Location VARCHAR(255),
@@ -162,4 +163,18 @@ CREATE TABLE PermissionWaiverEvent (
     FOREIGN KEY (PermissionWaiverID) REFERENCES PermissionWaiver(ID)
 );
 
+-- 1. MODIFY the existing Event table to add a Status column
+-- (If you are re-creating the DB, just update the CREATE definition)
+ALTER TABLE Event ADD COLUMN Status ENUM('OPEN', 'CLOSED', 'PLANNED') DEFAULT 'PLANNED';
 
+-- 2. CREATE a new table for historical attendance
+-- This is where data goes after it leaves Redis.
+CREATE TABLE AttendanceLog (
+    ID INT PRIMARY KEY AUTO_INCREMENT,
+    EventID INT NOT NULL,
+    YouthID INT NOT NULL,
+    CheckInTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (EventID) REFERENCES Event(ID),
+    FOREIGN KEY (YouthID) REFERENCES Youth(ID),
+    UNIQUE(EventID, YouthID) -- Prevents duplicate records
+);

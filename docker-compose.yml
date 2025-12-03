@@ -35,6 +35,8 @@ services:
       - "8000:8000"
     depends_on:
       - db
+      - mongo
+      - redis
     environment:
       # OVERRIDE the localhost setting for Docker networking
       MYSQL_HOST: db
@@ -42,7 +44,8 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MONGO_URL: mongodb://mongo:27017/ygms_mongo_db
+      MONGO_HOST: mongo
+      REDIS_HOST: redis
 
   redis:
     image: redis:alpine

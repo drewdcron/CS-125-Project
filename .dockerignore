@@ -1,0 +1,23 @@
+# Git
+.git
+
+# IDE
+.idea
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Environment
+.env*
+
+# OS-specific
+.DS_Store
+._*
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore

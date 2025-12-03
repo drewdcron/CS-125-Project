@@ -103,57 +103,60 @@ Built to support youth leaders, volunteers, parents/guardians, and students ages
 
 ## How to Run
 
+This project is fully containerized, so you only need Docker to run everything.
+
 ### 1. Prerequisites
-- Docker Desktop (running)
-- Python 3.10+
+- **Docker** and **Docker Compose** must be installed and running.
 
-
-### 2. Start Databases (Docker)
-Ensure Docker Desktop is running, then start the database containers:
+### 2. Environment Variables
+Before starting, you need to create a `.env` file to store database credentials. You can do this by copying the example file:
 ```bash
-docker-compose up -d db mongo redis
+cp .env_example .env
 ```
+Feel free to review and change the default passwords in the `.env` file.
 
-### 3. Setup & Run Backend:
-Install the required dependencies from the requirements file:
+### 3. Build and Run
+With Docker running, execute the following command from the project root directory:
 ```bash
-pip install -r requirements.txt
+docker-compose up --build
 ```
+> **Note:** If you have old containers running from a previous attempt, you may want to stop and remove them first with `docker-compose down`.
 
-Start the FastAPI server:
-```bash
-python main.py
-```
-### 4. Test API:
+This command will:
+1.  Build the Docker image for the backend service.
+2.  Start containers for the backend, MySQL, MongoDB, and Redis.
+3.  Automatically initialize the MySQL database with the schema and data from the `sql_files` directory.
 
-#### Option A: Interactive Dashboard (Frontend)
-Simply open the `frontend.html` file in your web browser.
-* It connects automatically to the API.
-* You can view the roster (**MySQL**) and perform live check-ins (**Redis**).
+The backend API will be available at `http://localhost:8000`.
 
-#### Option B: Built-in GraphiQL Interface
-Test using Insomnia or built-in GraphiQL interface
-- URL: http://127.0.0.1:8005/graphql
-- Method: POST
+### 4. Test the API
 
-Sample Query (Reads from MySQL & Redis):
+#### Option A: Interactive Dashboard
+Navigate to the following URL in your web browser to use the simple frontend dashboard:
+- **URL:** `http://localhost:8000/frontend`
 
-```bash
+#### Option B: GraphQL Interface
+Access the interactive GraphQL IDE (GraphiQL) to run queries and mutations directly:
+- **URL:** `http://localhost:8000/graphql`
+
+**Sample Query (Get event status and attendees):**
+```graphql
 query {
-  people {
+  event(eventId: 1) {
     id
     name
-  }
-  checkinStatus(userId: 1) {
     status
+    date
   }
+  eventAttendees(eventId: 1)
+  eventAttendeeCount(eventId: 1)
 }
 ```
 
-Sample Mutation (Writes to Redis):
-```bash
+**Sample Mutation (Check a user in):**
+```graphql
 mutation {
-  check_in_user(userId: 1)
+  check_in_user(eventId: 1, youthId: 1)
 }
 ```
 
