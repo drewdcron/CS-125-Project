@@ -2,149 +2,385 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>YGMS Event Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YG Check-In App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --success: #10b981;
+      --bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --danger: #ef4444;
+    }
 
-    .container { display: grid; grid-template-columns: 300px 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; }
-    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    h2 { margin-top: 0; color: #444; border-bottom: 2px solid #5c7cfa; padding-bottom: 10px; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+    }
 
-    input { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
-    button.action-btn { width: 100%; background: #5c7cfa; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 5px; }
-    button.action-btn:hover { background: #4263eb; }
+    /* Navbar */
+    .navbar {
+      background: var(--card-bg);
+      padding: 1rem 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
 
-    /* Roster Grid */
-    .roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
-    .student-card { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .logo {
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
 
-    /* Dynamic Buttons */
-    .btn-checkin { background: #ccc; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; color: #333; font-weight: bold; }
-    .btn-checkin:hover { opacity: 0.8; }
+    /* Main Container */
+    .container {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
 
-    .status-in { background: #20c997; color: white; cursor: default; } /* Green */
+    /* Active Event Banner */
+    .event-banner {
+      background: linear-gradient(135deg, var(--primary), #818cf8);
+      color: white;
+      padding: 1.5rem;
+      border-radius: 16px;
+      margin-bottom: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+    }
+
+    .event-info h2 { margin: 0; font-size: 1.5rem; }
+    .event-info p { margin: 5px 0 0; opacity: 0.9; }
+
+    .event-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .event-input {
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      width: 80px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    /* Grid Layout */
+    .roster-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    /* Student Cards */
+    .student-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: transform 0.2s, box-shadow 0.2s;
+      border-left: 5px solid transparent;
+    }
+
+    .student-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+
+    .student-info h3 { margin: 0; font-size: 1.1rem; }
+    .student-info span { font-size: 0.85rem; color: var(--text-muted); display: block; margin-top: 4px;}
+
+    /* Buttons */
+    .btn {
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-checkin {
+      background-color: #e5e7eb;
+      color: var(--text-muted);
+      width: 100px;
+    }
+
+    .btn-checkin:hover { background-color: #d1d5db; }
+
+    /* Checked In State */
+    .student-card.active {
+      border-left: 5px solid var(--success);
+      background: #ecfdf5;
+    }
+
+    .student-card.active .btn-checkin {
+      background-color: var(--success);
+      color: white;
+    }
+
+    .student-card.active .btn-checkin:hover {
+      background-color: #059669;
+    }
+
+    /* Admin Section (Collapsible) */
+    .admin-section {
+      margin-top: 3rem;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 2rem;
+    }
+
+    .admin-toggle {
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; text-decoration: underline; font-size: 0.9rem;
+    }
+
+    .admin-panel {
+      display: none;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-top: 1rem;
+      border: 1px dashed #ccc;
+    }
+
+    .admin-panel.open { display: block; }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; }
+    .form-group input, .form-group textarea {
+      width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box;
+    }
+
+    .btn-primary { background: var(--primary); color: white; width: 100%; }
+    .btn-primary:hover { background: var(--primary-hover); }
+
+    .btn-danger { background: white; color: var(--danger); border: 1px solid var(--danger); font-size: 0.9rem; }
+    .btn-danger:hover { background: #fef2f2; }
+
+    /* Toast Notification */
+    #toast {
+      visibility: hidden;
+      min-width: 250px;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 8px;
+      padding: 16px;
+      position: fixed;
+      z-index: 1;
+      left: 50%;
+      bottom: 30px;
+      transform: translateX(-50%);
+    }
+    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+
+    @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+    @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
   </style>
 </head>
 <body>
 
+  <nav class="navbar">
+    <div class="logo">
+      <span>🔥</span> YG Manager
+    </div>
+    <div style="font-size: 0.9rem; color: #666;">
+      Logged in as <strong>Leader</strong>
+    </div>
+  </nav>
+
   <div class="container">
 
-    <div>
-      <div class="card">
-        <h2>📅 Event Controls</h2>
-        <label><strong>Current Event ID:</strong></label>
-        <input type="number" id="eventId" value="101">
-        <button class="action-btn" onclick="refreshDashboard()">Load Event Data</button>
+    <div class="event-banner">
+      <div class="event-info">
+        <h2>Tonight's Event</h2>
+        <p>Live Check-In System</p>
       </div>
-
-      <br>
-
-      <div class="card">
-        <h2>✨ New Event Type</h2>
-        <input type="text" id="typeName" placeholder="Name (e.g. Retreat)">
-        <button class="action-btn" onclick="createEventType()">Save to Mongo/MySQL</button>
-        <p id="createMsg" style="font-size:0.8rem; color:green;"></p>
+      <div class="event-actions">
+        <div style="text-align:right; margin-right:10px;">
+          <small style="display:block; font-size:0.7rem; text-transform:uppercase; letter-spacing:1px;">Event ID</small>
+          <input type="number" id="eventId" class="event-input" value="101">
+        </div>
+        <button class="btn" style="background:rgba(255,255,255,0.2); color:white;" onclick="refreshDashboard()">Load</button>
       </div>
     </div>
 
-    <div class="card">
-      <h2>👥 Live Check-In Roster</h2>
-      <p>Click a button to check a student into Event <span id="displayEventId">101</span>.</p>
-      <div id="roster" class="roster-grid">Loading...</div>
+    <div id="roster" class="roster-grid">
+      <div style="text-align:center; grid-column: 1/-1; color:#888;">Loading Roster...</div>
+    </div>
+
+    <div class="admin-section">
+      <center>
+        <button class="admin-toggle" onclick="toggleAdmin()">Show Admin Controls (Advanced)</button>
+        <br><br>
+        <button class="btn btn-danger" style="max-width:200px;" onclick="endEvent()">🏁 End Event & Sync</button>
+      </center>
+
+      <div id="adminPanel" class="admin-panel">
+        <h3 style="margin-top:0;">Create New Event Type (MongoDB)</h3>
+        <div class="form-group">
+          <label>Event Name</label>
+          <input type="text" id="mongoName" placeholder="e.g. Summer Camp 2025">
+        </div>
+        <div class="form-group">
+          <label>Custom Fields (JSON)</label>
+          <textarea id="mongoSchema" rows="3">[{"field": "waiver_signed", "type": "bool"}]</textarea>
+        </div>
+        <button class="btn btn-primary" onclick="createEventType()">Create Definition</button>
+      </div>
     </div>
 
   </div>
 
+  <div id="toast">Message here</div>
+
   <script>
     const API_URL = "/graphql";
 
-    // 1. Fetch data from API
-    async function sendGQL(query) {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query })
-      });
-      return await response.json();
+    // UI Helpers
+    function showToast(message) {
+      const x = document.getElementById("toast");
+      x.innerText = message;
+      x.className = "show";
+      setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
     }
 
-    // 2. Main Refresh Logic
-    async function refreshDashboard() {
-      const eventId = document.getElementById('eventId').value;
-      document.getElementById('displayEventId').innerText = eventId;
-      const rosterDiv = document.getElementById('roster');
+    function toggleAdmin() {
+      const panel = document.getElementById('adminPanel');
+      panel.classList.toggle('open');
+    }
 
-      // Query: Get All People (MySQL) AND Get List of Checked-In IDs (Redis)
-      const query = `
-        query {
-          people { id name }
-          eventAttendees(eventId: ${eventId})
-        }
-      `;
-
+    async function sendGQL(query) {
       try {
-        const result = await sendGQL(query);
-        const people = result.data.people;
-        const attendees = result.data.eventAttendees; // Array of IDs [1, 5, ...]
-
-        rosterDiv.innerHTML = '';
-
-        people.forEach(p => {
-          // Check if this person's ID exists in the Redis array
-          const isCheckedIn = attendees.includes(p.id);
-
-          // Style button based on status
-          const btnClass = isCheckedIn ? "btn-checkin status-in" : "btn-checkin";
-          const btnText = isCheckedIn ? "✅ Checked In" : "Check In";
-          const action = isCheckedIn ? "" : `onclick="checkIn(${p.id})"`;
-
-          const html = `
-            <div class="student-card">
-              <div>
-                <strong>${p.name}</strong><br>
-                <small>ID: ${p.id}</small>
-              </div>
-              <button class="${btnClass}" ${action}>${btnText}</button>
-            </div>
-          `;
-          rosterDiv.innerHTML += html;
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: query })
         });
-
+        const json = await response.json();
+        if(json.errors) {
+            showToast("❌ Error: " + json.errors[0].message);
+            return null;
+        }
+        return json.data;
       } catch (e) {
-        console.error(e);
-        rosterDiv.innerHTML = "Error loading data.";
+        showToast("❌ Network Error: Is the server running?");
+        return null;
       }
     }
 
-    // 3. Mutation: Check In (Redis)
-    async function checkIn(studentId) {
+    // --- LOGIC ---
+
+    async function toggleCheckIn(studentId, isCurrentlyIn) {
       const eventId = document.getElementById('eventId').value;
-      const mutation = `
-        mutation {
-          checkInToEvent(eventId: ${eventId}, studentId: ${studentId})
-        }
-      `;
-      await sendGQL(mutation);
-      refreshDashboard(); // Reload to turn button green
+      let mutation;
+      if (isCurrentlyIn) {
+        mutation = `mutation { checkOutStudent(eventId: ${eventId}, studentId: ${studentId}) }`;
+      } else {
+        mutation = `mutation { checkInStudent(eventId: ${eventId}, studentId: ${studentId}) }`;
+      }
+
+      const data = await sendGQL(mutation);
+      if (data) {
+        refreshDashboard(); // Refresh UI to show new state
+      }
     }
 
-    // 4. Mutation: Create Event Type (Mongo)
-    async function createEventType() {
-      const name = document.getElementById('typeName').value;
-      // Hardcoded schema for demo
-      const schema = JSON.stringify([{ "field": "notes", "type": "text" }]);
+    async function refreshDashboard() {
+      const eventId = document.getElementById('eventId').value;
+      const rosterDiv = document.getElementById('roster');
 
-      const mutation = `
-        mutation {
-          createEventType(name: "${name}", schemaJson: ${JSON.stringify(schema)})
+      // Fetch MySQL People & Redis Live List
+      const query = `
+        query {
+          people { id name email }
+          eventLiveRoster(eventId: ${eventId})
         }
       `;
-      const res = await sendGQL(mutation);
-      document.getElementById('createMsg').innerText = res.data.createEventType;
+
+      const data = await sendGQL(query);
+      if (!data) return;
+
+      const people = data.people;
+      const attendees = data.eventLiveRoster; // List of IDs [1, 5, ...]
+
+      rosterDiv.innerHTML = '';
+
+      people.forEach(p => {
+        const isCheckedIn = attendees.includes(p.id);
+        const activeClass = isCheckedIn ? 'active' : '';
+        const btnText = isCheckedIn ? 'Present' : 'Absent';
+
+        // Shorten email for display
+        const displayEmail = p.email ? p.email : 'No email';
+
+        rosterDiv.innerHTML += `
+          <div class="student-card ${activeClass}">
+            <div class="student-info">
+              <h3>${p.name}</h3>
+              <span>${displayEmail}</span>
+            </div>
+            <button class="btn btn-checkin" onclick="toggleCheckIn(${p.id}, ${isCheckedIn})">
+              ${btnText}
+            </button>
+          </div>
+        `;
+      });
+    }
+
+    async function createEventType() {
+      const name = document.getElementById('mongoName').value;
+      const schema = document.getElementById('mongoSchema').value;
+      const escapedSchema = JSON.stringify(schema).slice(1, -1);
+
+      const mutation = `mutation { createEventType(name: "${name}", schemaJson: "${escapedSchema}") }`;
+      const data = await sendGQL(mutation);
+      if(data) {
+        showToast("✅ " + data.createEventType);
+        document.getElementById('mongoName').value = ""; // Clear input
+      }
+    }
+
+    async function endEvent() {
+      const eventId = document.getElementById('eventId').value;
+      if(!confirm(`Are you sure you want to CLOSE Event ${eventId}?\n\nThis will:\n1. Save attendance to MySQL\n2. Clear the live Redis list`)) return;
+
+      const mutation = `mutation { endEvent(eventId: ${eventId}) }`;
+      const data = await sendGQL(mutation);
+      if(data) {
+        showToast("💾 Saved to History!");
+        refreshDashboard();
+      }
     }
 
     // Load on start
     refreshDashboard();
+
   </script>
 </body>
 </html>
