@@ -120,6 +120,9 @@ REDIS_HOST= host
 REDIS_PORT= port
 REDIS_PASSWORD = password
 REDIS_USER = user
+
+# Mongo Information
+MONGO_HOST = host (set to localhost)
 ```
 
 
