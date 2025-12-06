@@ -1,195 +1,333 @@
 # main.py
-# Youth Group Management System Backend
-# Includes: FastAPI, SQLAlchemy (MySQL), Pydantic, Redis, MongoDB, and Strawberry (GraphQL)
-# @author Brevin Tating btating@westmont.edu
-
-
-import os
-from typing import List, Optional, Any
-from fastapi import FastAPI, Depends, HTTPException
+import json
+from datetime import datetime
+from typing import List, Optional
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import BaseModel, ConfigDict
 from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import sessionmaker, Session, declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
 from pymongo import MongoClient
 import redis
 import strawberry
 from strawberry.fastapi import GraphQLRouter
 import uvicorn
 
-# ==========================================
-#  CONFIGURATION
-# ==========================================
+
+# --- 1. CONFIGURATION ---
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
-    # MySQL
     MYSQL_USER: str = "root"
-    MYSQL_PASSWORD: str = "password" # Fallback if .env missing
+    MYSQL_PASSWORD: str = "password"  # Make sure this matches .env (e.g. cs125)
     MYSQL_HOST: str = "127.0.0.1"
-    MYSQL_PORT: int = 3306
+    MYSQL_PORT: int = 3307
     MYSQL_DATABASE: str = "ygms_db"
 
     # Mongo
     MONGO_HOST: str = "localhost"
 
-    # Redis (Cloud or Local)
-    REDIS_HOST: str = "localhost"
+    # Redis (Update to 127.0.0.1 if running local, or use Cloud URL)
+    REDIS_HOST: str = "127.0.0.1"
     REDIS_PORT: int = 6379
-    REDIS_USER: str = "default"
     REDIS_PASSWORD: str = ""
 
     @property
     def DATABASE_URL(self):
-        return (
-            f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@"
-            f"{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}"
-        )
+        return f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}"
+
 
 settings = Settings()
 
-# ==========================================
-#  DATABASE SETUP
-# ==========================================
-# MySQL Setup
+# --- 2. DATABASE SETUP ---
 Base = declarative_base()
 engine = create_engine(settings.DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 class PersonORM(Base):
     __tablename__ = "Person"
-    ID = Column(Integer, primary_key=True, index=True)
-    Name = Column(String(255), nullable=False)
-    Email = Column(String(100), unique=True)
-    PhoneNumber = Column(String(20), unique=True)
+    ID = Column(Integer, primary_key=True)
+    Name = Column(String(255))
+    Email = Column(String(100))
+    PhoneNumber = Column(String(20))
+    Role = Column(String(50))
 
-class Person(BaseModel):
-    ID: int
-    Name: str
-    Email: Optional[str] = None
-    PhoneNumber: Optional[str] = None
-    model_config = ConfigDict(from_attributes=True)
 
-# MongoDB Setup
+class EventTypeORM(Base):
+    __tablename__ = "EventType"
+    ID = Column(Integer, primary_key=True, autoincrement=True)
+    Name = Column(String(100), unique=True)
+
+
+class AttendanceORM(Base):
+    __tablename__ = "Attendance"
+    ID = Column(Integer, primary_key=True, autoincrement=True)
+    EventID = Column(Integer)
+    StudentID = Column(Integer)
+    Status = Column(String(50))
+
+
+# Create tables if missing
+Base.metadata.create_all(bind=engine)
+
+# --- NOSQL CONNECTIONS ---
+# MongoDB
 mongo_client = MongoClient(f"mongodb://{settings.MONGO_HOST}:27017")
 mongo_db = mongo_client["ygms_mongo_db"]
-notes_collection = mongo_db["meeting_notes"]
+event_types_collection = mongo_db["event_types"]  # Stores schemas
+event_custom_data_collection = mongo_db["event_custom_data"]  # Stores answers
 
-# Redis Setup
+# Redis
 try:
     redis_client = redis.Redis(
         host=settings.REDIS_HOST, port=settings.REDIS_PORT,
-        username=settings.REDIS_USER, password=settings.REDIS_PASSWORD,
-        decode_responses=True, socket_timeout=2
+        password=settings.REDIS_PASSWORD, decode_responses=True, socket_timeout=2
     )
 except:
     redis_client = None
 
-# ==========================================
-# GRAPHQL SCHEMA
-# ==========================================
+
+# --- 3. GRAPHQL TYPES ---
+
 @strawberry.type
 class PersonType:
     id: int
     name: str
     email: Optional[str]
-    phone_number: Optional[str]
+    role: str
 
-    @strawberry.field
-    def status(self) -> str:
-        if not redis_client:
-            return "Redis Error"
-        # Check Redis for this specific person's ID
-        val = redis_client.get(f"attendance:{self.id}")
-        return val if val else "Not Checked In"
 
 @strawberry.type
-class CheckInType:
-    user_id: int
-    status: str
+class EventTypeObj:
+    id: int
+    name: str
+
 
 @strawberry.type
-class NoteType:
-    id: str
-    content: str
+class MongoSchemaType:
+    type_id: int
+    schema_json: str
 
+
+@strawberry.type
+class CustomDataType:
+    student_id: int
+    event_id: int
+    data_json: str
+
+
+# --- 4. QUERY RESOLVERS (READ) ---
 @strawberry.type
 class Query:
+
+    # --- MySQL Queries ---
     @strawberry.field
     def people(self) -> List[PersonType]:
         db = SessionLocal()
         try:
             users = db.query(PersonORM).all()
-            return [
-                PersonType(id=u.ID, name=u.Name, email=u.Email, phone_number=u.PhoneNumber)
-                for u in users
-            ]
+            return [PersonType(id=u.ID, name=u.Name, email=u.Email, role=u.Role) for u in users]
         finally:
             db.close()
 
     @strawberry.field
-    def checkin_status(self, user_id: int) -> CheckInType:
-        if not redis_client:
-            return CheckInType(user_id=user_id, status="Redis Error")
-        status = redis_client.get(f"attendance:{user_id}")
-        return CheckInType(user_id=user_id, status=status if status else "Not Checked In")
+    def get_all_events(self) -> List[EventTypeObj]:
+        db = SessionLocal()
+        try:
+            events = db.query(EventTypeORM).all()
+            return [EventTypeObj(id=e.ID, name=e.Name) for e in events]
+        finally:
+            db.close()
+
+    # --- Redis Queries (Live Roster) ---
 
     @strawberry.field
-    def notes(self) -> List[NoteType]:
-        # Fetch all documents from MongoDB
-        raw_notes = notes_collection.find()
-        return [NoteType(id=str(n["_id"]), content=n["content"]) for n in raw_notes]
+    def event_live_roster(self, event_id: int) -> List[int]:
+        # Requirement: SMEMBERS (List all students)
+        if not redis_client: return []
+        members = redis_client.smembers(f"event:{event_id}:checkedIn")
+        return [int(m) for m in members]
+
+    @strawberry.field
+    def get_active_count(self, event_id: int) -> int:
+        # Requirement: SCARD (Get count)
+        if not redis_client: return 0
+        return redis_client.scard(f"event:{event_id}:checkedIn")
+
+    @strawberry.field
+    def is_student_checked_in(self, event_id: int, student_id: int) -> bool:
+        # Requirement: SISMEMBER (Check specific student)
+        if not redis_client: return False
+        return redis_client.sismember(f"event:{event_id}:checkedIn", student_id)
+
+    # --- MongoDB Queries (Schemas & Custom Data) ---
+
+    @strawberry.field
+    def get_event_schema(self, type_id: int) -> Optional[str]:
+        # Requirement: db.eventTypes.findOne
+        doc = event_types_collection.find_one({"typeId": type_id})
+        if doc:
+            return json.dumps(doc.get("schema", {}))
+        return None
+
+    @strawberry.field
+    def get_custom_data_for_event(self, event_id: int) -> List[CustomDataType]:
+        # Requirement: db.eventCustomData.find
+        cursor = event_custom_data_collection.find({"eventId": event_id})
+        results = []
+        for doc in cursor:
+            results.append(CustomDataType(
+                student_id=doc["studentId"],
+                event_id=doc["eventId"],
+                data_json=json.dumps(doc.get("data", {}))
+            ))
+        return results
 
 
+# --- 5. MUTATIONS (WRITE) ---
 @strawberry.type
 class Mutation:
-    # Write to Redis
+
+    # --- Setup Logic (MySQL + Mongo) ---
     @strawberry.mutation
-    def check_in_user(self, user_id: int) -> str:
-        if redis_client:
-            redis_client.set(f"attendance:{user_id}", "Checked In", ex=7200)
-            return f"User {user_id} Checked In"
-        return "Redis Error"
+    def create_event_type(self, name: str, schema_json: str) -> str:
+        db = SessionLocal()
+        try:
+            # 1. MySQL: Save basic info to get ID
+            new_type = EventTypeORM(Name=name)
+            db.add(new_type)
+            db.commit()
+            db.refresh(new_type)
+
+            # 2. MongoDB: Save the flexible schema
+            # Requirement: db.eventTypes.insertOne
+            schema_dict = json.loads(schema_json)
+            mongo_doc = {
+                "typeId": new_type.ID,
+                "name": name,
+                "schema": schema_dict
+            }
+            event_types_collection.insert_one(mongo_doc)
+
+            return f"{new_type.ID}:{name}"
+        except Exception as e:
+            return f"Error: {str(e)}"
+        finally:
+            db.close()
 
     @strawberry.mutation
-    def add_note(self, content: str) -> str:
-        result = notes_collection.insert_one({"content": content})
-        return f"Note saved with ID: {result.inserted_id}"
+    def update_event_schema(self, type_id: int, schema_json: str) -> str:
+        # Requirement: db.eventTypes.updateOne
+        try:
+            new_schema = json.loads(schema_json)
+            result = event_types_collection.update_one(
+                {"typeId": type_id},
+                {"$set": {"schema": new_schema}}
+            )
+            return f"Updated: {result.modified_count} docs"
+        except Exception as e:
+            return f"Error: {e}"
+
+    @strawberry.mutation
+    def submit_custom_data(self, event_id: int, student_id: int, data_json: str) -> str:
+        # Requirement: db.eventCustomData.insertOne
+        try:
+            data_dict = json.loads(data_json)
+            doc = {
+                "eventId": event_id,
+                "studentId": student_id,
+                "data": data_dict
+            }
+            event_custom_data_collection.insert_one(doc)
+            return "Data Saved"
+        except Exception as e:
+            return f"Error: {e}"
+
+    # --- Live Check-In Logic (Redis) ---
+
+    @strawberry.mutation
+    def check_in_student(self, event_id: int, student_id: int) -> str:
+        if not redis_client: return "Redis Error"
+
+        # 1. Add to Roster (Set)
+        # Requirement: SADD
+        redis_client.sadd(f"event:{event_id}:checkedIn", student_id)
+
+        # 2. Log Timestamp (Hash)
+        # Requirement: HSET
+        timestamp = datetime.now().isoformat()
+        redis_client.hset(f"event:{event_id}:checkInTimes", str(student_id), timestamp)
+
+        return "Checked In"
+
+    @strawberry.mutation
+    def check_out_student(self, event_id: int, student_id: int) -> str:
+        if not redis_client: return "Redis Error"
+
+        # 1. Remove from Roster (Set)
+        # Requirement: SREM
+        redis_client.srem(f"event:{event_id}:checkedIn", student_id)
+
+        # 2. Log Timestamp (Hash)
+        # Requirement: HSET
+        timestamp = datetime.now().isoformat()
+        redis_client.hset(f"event:{event_id}:checkOutTimes", str(student_id), timestamp)
+
+        return "Checked Out"
+
+    # --- End Event Logic (Redis -> MySQL) ---
+
+    @strawberry.mutation
+    def end_event(self, event_id: int) -> str:
+        if not redis_client: return "Redis Error"
+
+        # 1. Get final roster
+        key_roster = f"event:{event_id}:checkedIn"
+        ids = redis_client.smembers(key_roster)
+
+        # 2. Persist to MySQL
+        db = SessionLocal()
+        try:
+            count = 0
+            for s_id in ids:
+                exists = db.query(AttendanceORM).filter_by(EventID=event_id, StudentID=int(s_id)).first()
+                if not exists:
+                    db.add(AttendanceORM(EventID=event_id, StudentID=int(s_id), Status="Present"))
+                    count += 1
+            db.commit()
+
+            # 3. Cleanup Redis (Requirement: DEL all keys)
+            redis_client.delete(key_roster)
+            redis_client.delete(f"event:{event_id}:checkInTimes")
+            redis_client.delete(f"event:{event_id}:checkOutTimes")
+
+            return f"Event Ended. Saved {count} records."
+        except Exception as e:
+            return f"Error: {e}"
+        finally:
+            db.close()
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)
 graphql_app = GraphQLRouter(schema)
 
-# ==========================================
-# API APPLICATION
-# ==========================================
-app = FastAPI(title="YGMS Unified API")
-
-from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    # This allows your IDE (and anything else) to talk to the backend
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Routes
+app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.include_router(graphql_app, prefix="/graphql")
 
 @app.get("/")
 def read_root():
-    return {"message": "YGMS Backend Running", "graphql_url": "http://127.0.0.1:8005/graphql"}
+    return {"message":"Welcome to the YGMS!",
+            "graphql_url":"http://127.0.0.1:8005/graphql",
+            "frontend_url":"http://127.0.0.1:8005/frontend"}
 
-# Run Command
+@app.get("/frontend", response_class=HTMLResponse)
+def serve_frontend():
+    with open("frontend.html", "r", encoding="utf-8") as f: return f.read()
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8005)
+    print(f"🚀 STARTUP CHECK: Connecting to MySQL on Port {settings.MYSQL_PORT}")
+
+    uvicorn.run(app, host="127.0.0.1", port=8005)

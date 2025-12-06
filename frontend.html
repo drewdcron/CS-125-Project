@@ -3,185 +3,284 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YGMS | Leader Dashboard</title>
+  <title>YGMS Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --primary: #5c7cfa;
-      --bg: #f8f9fa;
-      --card-bg: #ffffff;
-      --text: #333;
-    }
+    :root { --primary: #4f46e5; --bg: #f3f4f6; --text: #1f2937; --success: #10b981; --danger: #ef4444; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
 
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 0;
-    }
+    /* Sidebar */
+    .sidebar { width: 280px; background: #1e293b; color: #f1f5f9; padding: 25px; display: flex; flex-direction: column; gap: 20px; box-shadow: 4px 0 10px rgba(0,0,0,0.1); }
+    .logo { font-size: 1.8rem; font-weight: 800; color: #60a5fa; letter-spacing: -1px; }
 
-    /* Header Styling */
-    header {
-      background: var(--primary);
-      color: white;
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
+    label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 5px; display: block; }
+    select, input { width: 100%; padding: 12px; border-radius: 8px; background: #334155; color: white; border: 1px solid #475569; outline: none; box-sizing: border-box; }
+    select:focus, input:focus { border-color: #60a5fa; }
 
-    h1 { margin: 0; font-size: 1.5rem; }
+    /* Main Area */
+    .main { flex-grow: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; }
 
-    /* Dashboard Grid */
-    .container {
-      max-width: 1200px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-      display: grid;
-      grid-template-columns: 2fr 1fr; /* Two columns */
-      gap: 2rem;
-    }
+    .header { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .header h1 { margin: 0; font-size: 1.5rem; }
+    .badge { background: #eff6ff; color: var(--primary); padding: 5px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; }
+
+    /* Live Count Badge (Redis) */
+    .live-count { background: var(--success); color: white; padding: 8px 16px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+    .dot { width: 10px; height: 10px; background: white; border-radius: 50%; animation: pulse 1.5s infinite; }
+
+    /* Grid */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
 
     /* Cards */
-    .card {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 5px solid transparent; transition: transform 0.2s; }
+    .card:hover { transform: translateY(-2px); }
+    .card.present { border-left-color: var(--success); background: #f0fdf4; }
+    .card.absent { border-left-color: #cbd5e1; }
 
-    .card h2 { margin-top: 0; color: var(--primary); font-size: 1.2rem; border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
+    /* Buttons */
+    .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 10px; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.9; }
+    .btn-action { background: #e2e8f0; color: #475569; }
+    .card.present .btn-action { background: #dcfce7; color: #166534; }
 
-    /* List Styles */
-    ul { list-style: none; padding: 0; }
-    li {
-      padding: 0.8rem;
-      border-bottom: 1px solid #f0f0f0;
-      display: flex;
-      justify-content: space-between;
-    }
-    li:last-child { border-bottom: none; }
+    .btn-create { background: var(--primary); color: white; margin-top: 5px; }
+    .btn-end { background: var(--danger); color: white; margin-top: auto; }
+    .btn-form { background: #f59e0b; color: white; } /* Mongo Button */
 
-    /* Buttons & Status */
-    .status-badge {
-      background: #e6fcf5;
-      color: #0ca678;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: bold;
-    }
+    .admin-only { display: none; }
 
-    .status-missing {
-      background: #fff5f5;
-      color: #fa5252;
-    }
-
-    button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 1rem;
-      margin-top: 1rem;
-    }
-    button:hover { opacity: 0.9; }
-
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>Youth Group Management</h1>
-    <span>Logged in as: <strong>Admin</strong></span>
-  </header>
+  <aside class="sidebar">
+    <div class="logo">🔥 YGMS</div>
 
-  <div class="container">
-
-    <div class="card">
-      <h2>👥 Student Roster (MySQL)</h2>
-      <p>Loaded from relational database.</p>
-      <ul id="roster-list">
-        <li>Loading roster...</li>
-      </ul>
+    <div>
+      <label for="userSelector">Logged in as:</label>
+      <select id="userSelector" onchange="switchUser()"></select>
     </div>
 
-    <div class="card">
-      <h2>🔴 Live Check-In (Redis)</h2>
-      <p>Real-time attendance status.</p>
+    <div>
+      <label for="eventSelector">Active Event:</label>
+      <select id="eventSelector" onchange="refreshDashboard()">
+        <option value="">Loading...</option>
+      </select>
+    </div>
 
-      <div id="checkin-display">
-        <h3>User ID: 1</h3>
-        <p>Status: <span id="status-badge" class="status-badge status-missing">Checking...</span></p>
+    <div class="admin-only" style="border-top: 1px solid #334155; padding-top: 20px;">
+      <label>New Event (Saves to Mongo)</label>
+      <input type="text" id="newEventName" placeholder="Event Name...">
+      <button class="btn btn-create" onclick="createEventType()">+ Create & Attach Schema</button>
+    </div>
+
+    <button class="btn btn-end admin-only" onclick="endEvent()">🏁 End Active Event</button>
+  </aside>
+
+  <main class="main">
+    <div class="header">
+      <div>
+        <h1 id="eventTitle">Select an Event</h1>
+        <div style="color: #64748b; margin-top: 5px;" id="eventSubtitle">No event active</div>
       </div>
 
-      <button onclick="refreshData()">Refresh Dashboard</button>
+      <div id="liveCountBadge" class="live-count" style="display:none;">
+        <div class="dot"></div>
+        <span id="countValue">0</span> Present
+      </div>
     </div>
 
-  </div>
+    <div id="roster" class="grid"></div>
+  </main>
 
   <script>
-    // This is the URL of your backend
-    const API_URL = "http://127.0.0.1:8005/graphql";
+    const API_URL = "/graphql";
+    let currentUserRole = "Student";
+    let currentUserId = null;
 
-    async function refreshData() {
-      const rosterList = document.getElementById('roster-list');
-      const statusBadge = document.getElementById('status-badge');
-
-      // 1. The GraphQL Query (Asks for MySQL data AND Redis data)
-      const query = `
-        query {
-          people {
-            id
-            name
-            email
-          }
-          checkinStatus(userId: 1) {
-            status
-          }
-        }
-      `;
-
+    async function sendGQL(query) {
       try {
-        // 2. Fetch data from your backend
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch(API_URL, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: query })
         });
+        const json = await res.json();
+        return json.data;
+      } catch(e) { console.error(e); return null; }
+    }
 
-        const result = await response.json();
-        const data = result.data;
-
-        // 3. Update Roster (MySQL Data)
-        rosterList.innerHTML = '';
-        data.people.forEach(person => {
-          const li = document.createElement('li');
-          li.innerHTML = `<span><strong>${person.name}</strong></span> <span style="color:#888">${person.email || 'No Email'}</span>`;
-          rosterList.appendChild(li);
+    // --- INITIALIZATION ---
+    async function init() {
+      // Load Users
+      const userData = await sendGQL(`query { people { id name role } }`);
+      const userSel = document.getElementById('userSelector');
+      if(userData) {
+        userData.people.forEach(u => {
+          userSel.innerHTML += `<option value="${u.role}" data-id="${u.id}">${u.name} (${u.role})</option>`;
         });
+      }
+      switchUser(); // Set initial role
+      await loadEvents();
+    }
 
-        // 4. Update Status (Redis Data)
-        statusBadge.textContent = data.checkinStatus.status;
-
-        // Change color based on status
-        if(data.checkinStatus.status === "Checked In") {
-            statusBadge.className = "status-badge";
-        } else {
-            statusBadge.className = "status-badge status-missing";
-        }
-
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        rosterList.innerHTML = `<li style="color:red">Error connecting to server. Is main.py running?</li>`;
+    async function loadEvents(selectId = null) {
+      const data = await sendGQL(`query { getAllEvents { id name } }`);
+      const sel = document.getElementById('eventSelector');
+      sel.innerHTML = "";
+      if(data && data.getAllEvents.length > 0) {
+        data.getAllEvents.forEach(e => {
+          const selected = (selectId && parseInt(selectId) == e.id) ? "selected" : "";
+          sel.innerHTML += `<option value="${e.id}" ${selected}>${e.name}</option>`;
+        });
+        refreshDashboard();
+      } else {
+        sel.innerHTML = "<option value=''>No Events Found</option>";
       }
     }
 
-    // Load data automatically when page opens
-    window.onload = refreshData;
+    function switchUser() {
+      const sel = document.getElementById('userSelector');
+      currentUserRole = sel.value;
+      currentUserId = sel.options[sel.selectedIndex].getAttribute('data-id');
+
+      const adminEls = document.querySelectorAll('.admin-only');
+      adminEls.forEach(el => el.style.display = (currentUserRole === 'Leader') ? 'block' : 'none');
+      refreshDashboard();
+    }
+
+    // --- CORE LOGIC ---
+    async function refreshDashboard() {
+      const eventId = document.getElementById('eventSelector').value;
+      if(!eventId) return;
+
+      const eventName = document.getElementById('eventSelector').selectedOptions[0].text;
+      document.getElementById('eventTitle').innerText = eventName;
+      document.getElementById('eventSubtitle').innerText = `ID: ${eventId}`;
+
+      // 1. Fetch Data (MySQL Users + Redis Roster + Redis Count)
+      const data = await sendGQL(`
+        query {
+          people { id name role }
+          eventLiveRoster(eventId: ${eventId})
+          getActiveCount(eventId: ${eventId})
+        }
+      `);
+
+      // 2. Update Live Count Badge (Redis SCARD)
+      document.getElementById('liveCountBadge').style.display = 'flex';
+      document.getElementById('countValue').innerText = data.getActiveCount;
+
+      // 3. Render Roster
+      const rosterDiv = document.getElementById('roster');
+      rosterDiv.innerHTML = "";
+
+      data.people.forEach(p => {
+        const isPresent = data.eventLiveRoster.includes(p.id);
+        const cardClass = isPresent ? "present" : "absent";
+        const statusText = isPresent ? "✅ Checked In" : "❌ Not Here";
+
+        let actionHtml = "";
+
+        // LEADER View: Scan In/Out Buttons
+        if(currentUserRole === 'Leader') {
+          const btnText = isPresent ? "Scan Out" : "Scan In";
+          const fn = isPresent ? "checkOut" : "checkIn";
+          actionHtml = `<button class="btn btn-action" onclick="${fn}(${p.id})">${btnText}</button>`;
+        }
+        // STUDENT View: Custom Data Form (Mongo)
+        else if (p.id == currentUserId) {
+             actionHtml = `
+                <div style="margin-top:10px; font-weight:bold;">${statusText}</div>
+                <button class="btn btn-form" onclick="submitCustomData(${eventId})">📝 Update Snack Prefs & Allergies</button>
+             `;
+        } else {
+            actionHtml = `<div style="margin-top:10px; color:#94a3b8;">${statusText}</div>`;
+        }
+
+        rosterDiv.innerHTML += `
+          <div class="card ${cardClass}">
+            <h3 style="margin:0;">${p.name}</h3>
+            <small style="color:#64748b;">${p.role}</small>
+            ${actionHtml}
+          </div>
+        `;
+      });
+    }
+
+    // --- MUTATIONS ---
+
+    // 1. Create Event + Mongo Schema
+    async function createEventType() {
+      const name = document.getElementById('newEventName').value;
+      if(!name) return;
+
+      // Default Schema we attach to every new event
+      const defaultSchema = JSON.stringify({
+        "fields": ["allergies", "snack_preference", "emergency_contact"],
+        "required": ["emergency_contact"]
+      });
+
+      // Escape quotes for GraphQL
+      const schemaSafe = defaultSchema.replace(/"/g, '\\"');
+
+      const res = await sendGQL(`mutation { createEventType(name: "${name}", schemaJson: "${schemaSafe}") }`);
+      const newId = res.createEventType.split(':')[0];
+
+      alert(`Event Created & MongoDB Schema Attached!`);
+      document.getElementById('newEventName').value = "";
+      await loadEvents(newId);
+    }
+
+    // 2. Redis Check In
+    async function checkIn(id) {
+      const eid = document.getElementById('eventSelector').value;
+      await sendGQL(`mutation { checkInStudent(eventId: ${eid}, studentId: ${id}) }`);
+      refreshDashboard();
+    }
+
+    // 3. Redis Check Out
+    async function checkOut(id) {
+      const eid = document.getElementById('eventSelector').value;
+      await sendGQL(`mutation { checkOutStudent(eventId: ${eid}, studentId: ${id}) }`);
+      refreshDashboard();
+    }
+
+    // 4. Mongo Custom Data (Updated for Allergies)
+    async function submitCustomData(eventId) {
+      // Question 1: Snacks
+      const snack = prompt("Enter your snack preference:", "Chips");
+      if(!snack) return; // Stop if they hit Cancel
+
+      // Question 2: Allergies (New!)
+      const allergies = prompt("Any allergies we should know about? (Leave blank if none):", "");
+
+      // Bundle both into one JSON object
+      const dataPacket = {
+        "snack": snack,
+        "allergies": allergies || "None", // Default to "None" if empty
+        "timestamp": new Date().toISOString()
+      };
+
+      const dataJson = JSON.stringify(dataPacket);
+      // Escape quotes for GraphQL
+      const dataSafe = dataJson.replace(/"/g, '\\"');
+
+      await sendGQL(`mutation { submitCustomData(eventId: ${eventId}, studentId: ${currentUserId}, dataJson: "${dataSafe}") }`);
+      alert("Preferences & Allergies saved to MongoDB!");
+    }
+
+    // 5. End Event (Flush Redis -> MySQL)
+    async function endEvent() {
+      const eid = document.getElementById('eventSelector').value;
+      if(!confirm("End this event? This will save attendance to MySQL and clear Redis.")) return;
+
+      const res = await sendGQL(`mutation { endEvent(eventId: ${eid}) }`);
+      alert(res.endEvent);
+      refreshDashboard();
+    }
+
+    init();
   </script>
 </body>
 </html>
