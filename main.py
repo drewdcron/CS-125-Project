@@ -18,19 +18,19 @@ import uvicorn
 # --- 1. CONFIGURATION ---
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-    MYSQL_USER: str = "root"
-    MYSQL_PASSWORD: str = "password"  # Make sure this matches .env (e.g. cs125)
-    MYSQL_HOST: str = "127.0.0.1"
-    MYSQL_PORT: int = 3307
-    MYSQL_DATABASE: str = "ygms_db"
+    MYSQL_USER: str
+    MYSQL_PASSWORD: str
+    MYSQL_HOST: str
+    MYSQL_PORT: int
+    MYSQL_DATABASE: str
 
     # Mongo
-    MONGO_HOST: str = "localhost"
+    MONGO_HOST: str
 
     # Redis (Update to 127.0.0.1 if running local, or use Cloud URL)
-    REDIS_HOST: str = "127.0.0.1"
-    REDIS_PORT: int = 6379
-    REDIS_PASSWORD: str = ""
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_PASSWORD: str
 
     @property
     def DATABASE_URL(self):
