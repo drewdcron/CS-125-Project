@@ -126,8 +126,9 @@ REDIS_USER = user
 ### 2. Start Databases (Docker)
 Ensure Docker Desktop is running, then start the database containers:
 ```bash
-docker-compose up -d db mongo redis
+docker-compose up -d 
 ```
+##### Note: Wait approximately 30 seconds after starting for MySQL to initialize and populate the seed data.
 
 ### 3. Setup & Run Backend:
 Install the required dependencies from the requirements file:
@@ -137,14 +138,15 @@ pip install -r requirements.txt
 
 Start the FastAPI server:
 ```bash
-python main.py
+python3 main.py
 ```
 ### 4. Test API:
 
 #### Option A: Interactive Dashboard (Frontend)
-Simply open the `frontend.html` file in your web browser.
-* It connects automatically to the API.
-* You can view the roster (**MySQL**) and perform live check-ins (**Redis**).
+Open your browser to the following URL: http://127.0.0.1:8005/frontend
+- Login: Select a user from the dropdown (e.g., "Pastor Mike" for Admin features, "Ethan Smith" for Student features).
+- Check-In: Select an event and use the buttons to interact with Redis (Live Roster).
+- Forms: Log in as a student to submit custom forms (MongoDB).
 
 #### Option B: Built-in GraphiQL Interface
 Test using Insomnia or built-in GraphiQL interface
@@ -158,17 +160,24 @@ query {
   people {
     id
     name
+    role
   }
-  checkinStatus(userId: 1) {
-    status
-  }
+  eventLiveRoster(eventId: 1)
+  getActiveCount(eventId: 1)
 }
 ```
 
 Sample Mutation (Writes to Redis):
 ```bash
 mutation {
-  check_in_user(userId: 1)
+  checkInStudent(eventId: 1, studentId: 8)
+}
+```
+
+Sample Mutation (Writes to MongoDB):
+```bash
+mutation {
+  submitCustomData(eventId: 1, studentId: 8, dataJson: "{\"snack\": \"Chips\", \"allergies\": \"None\"}")
 }
 ```
 
