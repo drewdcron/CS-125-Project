@@ -140,6 +140,13 @@ class Query:
         finally:
             db.close()
 
+    @strawberry.field
+    def get_rsvp_list(self, event_id: int) -> List[int]:
+        # New list just for RSVPs
+        if not redis_client: return []
+        members = redis_client.smembers(f"event:{event_id}:rsvp")
+        return [int(m) for m in members]
+
     # --- Redis Queries (Live Roster) ---
 
     @strawberry.field
@@ -217,6 +224,13 @@ class Mutation:
             db.close()
 
     @strawberry.mutation
+    def rsvp_student(self, event_id: int, student_id: int) -> str:
+        # Adds to the RSVP list (Intention), NOT the Check-In list (Presence)
+        if not redis_client: return "Redis Error"
+        redis_client.sadd(f"event:{event_id}:rsvp", student_id)
+        return "RSVP Confirmed"
+
+    @strawberry.mutation
     def update_event_schema(self, type_id: int, schema_json: str) -> str:
         # Requirement: db.eventTypes.updateOne
         try:
@@ -282,31 +296,52 @@ class Mutation:
     def end_event(self, event_id: int) -> str:
         if not redis_client: return "Redis Error"
 
-        # 1. Get final roster
-        key_roster = f"event:{event_id}:checkedIn"
-        ids = redis_client.smembers(key_roster)
-
-        # 2. Persist to MySQL
         db = SessionLocal()
         try:
+            # --- 1. SAVE ATTENDANCE (Redis -> MySQL) ---
+            # Retrieve the list of student IDs from the active Redis roster
+            key_roster = f"event:{event_id}:checkedIn"
+            ids = redis_client.smembers(key_roster)
+
             count = 0
             for s_id in ids:
+                # Check if this record already exists in MySQL to prevent duplicates
                 exists = db.query(AttendanceORM).filter_by(EventID=event_id, StudentID=int(s_id)).first()
                 if not exists:
+                    # Create the permanent record. Even if the Event is deleted later,
+                    # this row stays in the 'Attendance' table.
                     db.add(AttendanceORM(EventID=event_id, StudentID=int(s_id), Status="Present"))
                     count += 1
+
+            # Commit the attendance records first
             db.commit()
 
-            # 3. Cleanup Redis (Requirement: DEL all keys)
-            redis_client.delete(key_roster)
-            redis_client.delete(f"event:{event_id}:checkInTimes")
-            redis_client.delete(f"event:{event_id}:checkOutTimes")
+            # --- 2. DELETE EVENT FROM MENU (MySQL) ---
+            # This removes the event from the 'EventType' table, so it
+            # stops showing up in the frontend dropdown.
+            event = db.query(EventTypeORM).filter_by(ID=event_id).first()
+            event_name = "Unknown Event"
 
-            return f"Event Ended. Saved {count} records."
+            if event:
+                event_name = event.Name
+                db.delete(event)
+                db.commit()
+
+
+            # --- 3. PRESERVE MONGO (Do Nothing) ---
+            # We intentionally DO NOT delete from 'event_custom_data_collection'.
+            # This ensures snack preferences and allergies are kept forever.
+
+            return f"Event '{event_name}' ended. {count} attendance records saved. Event removed from active menu."
+
         except Exception as e:
+            db.rollback()
             return f"Error: {e}"
         finally:
             db.close()
+
+
+
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)
@@ -328,6 +363,6 @@ def serve_frontend():
 
 
 if __name__ == "__main__":
-    print(f"🚀 STARTUP CHECK: Connecting to MySQL on Port {settings.MYSQL_PORT}")
+    print(f"STARTUP CHECK: Connecting to MySQL on Port {settings.MYSQL_PORT}")
 
     uvicorn.run(app, host="127.0.0.1", port=8005)
