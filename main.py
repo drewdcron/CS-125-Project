@@ -58,6 +58,7 @@ class EventTypeORM(Base):
     __tablename__ = "EventType"
     ID = Column(Integer, primary_key=True, autoincrement=True)
     Name = Column(String(100), unique=True)
+    Status = Column(String(50), default="Active") # <--- MUST BE HERE
 
 
 class AttendanceORM(Base):
@@ -77,6 +78,7 @@ mongo_client = MongoClient(f"mongodb://{settings.MONGO_HOST}:27017")
 mongo_db = mongo_client["ygms_mongo_db"]
 event_types_collection = mongo_db["event_types"]  # Stores schemas
 event_custom_data_collection = mongo_db["event_custom_data"]  # Stores answers
+student_profiles_collection = mongo_db["student_profiles"]
 
 # Redis
 try:
@@ -102,6 +104,7 @@ class PersonType:
 class EventTypeObj:
     id: int
     name: str
+    status: str
 
 
 @strawberry.type
@@ -136,7 +139,8 @@ class Query:
         db = SessionLocal()
         try:
             events = db.query(EventTypeORM).all()
-            return [EventTypeObj(id=e.ID, name=e.Name) for e in events]
+            # Ensure status=e.Status is passed here
+            return [EventTypeObj(id=e.ID, name=e.Name, status=e.Status or "Active") for e in events]
         finally:
             db.close()
 
@@ -190,6 +194,14 @@ class Query:
                 data_json=json.dumps(doc.get("data", {}))
             ))
         return results
+
+    @strawberry.field
+    def get_student_profile(self, student_id: int) -> str:
+        # Fetches permanent profile from Mongo
+        doc = student_profiles_collection.find_one({"studentId": student_id})
+        if doc:
+            return json.dumps(doc.get("data", {}))
+        return "{}"
 
 
 # --- 5. MUTATIONS (WRITE) ---
@@ -290,6 +302,20 @@ class Mutation:
 
         return "Checked Out"
 
+    @strawberry.mutation
+    def update_student_profile(self, student_id: int, data_json: str) -> str:
+        # Upsert: Update if exists, Insert if it doesn't
+        try:
+            data_dict = json.loads(data_json)
+            student_profiles_collection.update_one(
+                {"studentId": student_id},
+                {"$set": {"data": data_dict}},
+                upsert=True
+            )
+            return "Profile Updated Successfully"
+        except Exception as e:
+            return f"Error: {e}"
+
     # --- End Event Logic (Redis -> MySQL) ---
 
     @strawberry.mutation
@@ -298,41 +324,35 @@ class Mutation:
 
         db = SessionLocal()
         try:
-            # --- 1. SAVE ATTENDANCE (Redis -> MySQL) ---
-            # Retrieve the list of student IDs from the active Redis roster
+            # 1. SAVE ATTENDANCE (Redis -> MySQL)
             key_roster = f"event:{event_id}:checkedIn"
             ids = redis_client.smembers(key_roster)
 
             count = 0
             for s_id in ids:
-                # Check if this record already exists in MySQL to prevent duplicates
                 exists = db.query(AttendanceORM).filter_by(EventID=event_id, StudentID=int(s_id)).first()
                 if not exists:
-                    # Create the permanent record. Even if the Event is deleted later,
-                    # this row stays in the 'Attendance' table.
                     db.add(AttendanceORM(EventID=event_id, StudentID=int(s_id), Status="Present"))
                     count += 1
-
-            # Commit the attendance records first
             db.commit()
 
-            # --- 2. DELETE EVENT FROM MENU (MySQL) ---
-            # This removes the event from the 'EventType' table, so it
-            # stops showing up in the frontend dropdown.
+            # 2. UPDATE STATUS TO 'ENDED' (The Soft Delete)
+            # We do NOT use db.delete() anymore. We just mark it as Ended.
             event = db.query(EventTypeORM).filter_by(ID=event_id).first()
-            event_name = "Unknown Event"
+            event_name = "Unknown"
 
             if event:
                 event_name = event.Name
-                db.delete(event)
+                event.Status = "Ended"  # <--- This is the key change
                 db.commit()
 
+            # 3. CLEANUP REDIS
+            redis_client.delete(key_roster)
+            redis_client.delete(f"event:{event_id}:checkInTimes")
+            redis_client.delete(f"event:{event_id}:checkOutTimes")
+            redis_client.delete(f"event:{event_id}:rsvp")
 
-            # --- 3. PRESERVE MONGO (Do Nothing) ---
-            # We intentionally DO NOT delete from 'event_custom_data_collection'.
-            # This ensures snack preferences and allergies are kept forever.
-
-            return f"Event '{event_name}' ended. {count} attendance records saved. Event removed from active menu."
+            return f"Event '{event_name}' marked as Ended. {count} records saved."
 
         except Exception as e:
             db.rollback()
@@ -353,13 +373,22 @@ app.include_router(graphql_app, prefix="/graphql")
 
 @app.get("/")
 def read_root():
-    return {"message":"Welcome to the YGMS!",
-            "graphql_url":"http://127.0.0.1:8005/graphql",
-            "frontend_url":"http://127.0.0.1:8005/frontend"}
+    return {
+        "message": "YGMS Backend Active",
+        "GraphQL": "http://127.0.0.1:8005/graphql",
+        "leader_portal": "http://127.0.0.1:8005/frontend/leader",
+        "guest_portal": "http://127.0.0.1:8005/frontend/guest"
+    }
 
-@app.get("/frontend", response_class=HTMLResponse)
-def serve_frontend():
-    with open("frontend.html", "r", encoding="utf-8") as f: return f.read()
+# Leader Portal
+@app.get("/frontend/leader", response_class=HTMLResponse)
+def serve_leader():
+    with open("html_files/leader.html", "r", encoding="utf-8") as f: return f.read()
+
+# Guest Portal
+@app.get("/frontend/guest", response_class=HTMLResponse)
+def serve_guest():
+    with open("html_files/guest.html", "r", encoding="utf-8") as f: return f.read()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>YGMS Leader Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    /* LEADER THEME: Dark Sidebar, Professional Grid */
+    :root { --primary: #4f46e5; --bg: #f3f4f6; --text: #1f2937; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+
+    .sidebar { width: 280px; background: #1e293b; color: #f1f5f9; padding: 25px; display: flex; flex-direction: column; gap: 20px; box-shadow: 4px 0 10px rgba(0,0,0,0.1); }
+    .logo { font-size: 1.5rem; font-weight: 800; color: #60a5fa; letter-spacing: -1px; margin-bottom: 10px; }
+
+    label { font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px; display: block; }
+    select, input { width: 100%; padding: 12px; border-radius: 8px; background: #334155; color: white; border: 1px solid #475569; outline: none; box-sizing: border-box; }
+
+    .main { flex-grow: 1; padding: 40px; overflow-y: auto; }
+    .header { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+
+    #searchBar { background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 10px 15px; width: 250px; }
+    .live-count { background: var(--success); color: white; padding: 8px 16px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 8px solid transparent; }
+
+    .card.checked-in { border-left-color: var(--success); background: #dcfce7; }
+    .card.rsvp-only { border-left-color: var(--warning); background: #fffbeb; }
+    .card.absent { border-left-color: var(--danger); background: #fee2e2; }
+
+    .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 10px; }
+    .btn-create { background: var(--primary); color: white; }
+    .btn-end { background: var(--danger); color: white; margin-top: auto; }
+    .btn-action { background: #e2e8f0; color: #475569; }
+    .card.checked-in .btn-action { background: #166534; color: white; }
+    .btn-info { background: white; border: 1px solid #cbd5e1; color: #475569; margin-top: 5px; }
+
+    /* Read Only Profile View */
+    .profile-view { background: white; padding: 30px; border-radius: 12px; max-width: 600px; margin: 0 auto; }
+    .ro-label { color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: bold; }
+    .ro-val { font-size: 1.1rem; color: #1e293b; margin-top: 5px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="logo">🛡️ LEADER PORTAL</div>
+
+    <div>
+      <label>Current Leader:</label>
+      <select id="userSelector"></select>
+    </div>
+
+    <div>
+      <label>Manage Active Event:</label>
+      <select id="eventSelector" onchange="refreshDashboard()">
+        <option value="">Loading...</option>
+      </select>
+    </div>
+
+    <div style="border-top: 1px solid #334155; padding-top: 20px;">
+      <label>Create New Event</label>
+      <input type="text" id="newEventName" placeholder="Event Name...">
+      <button class="btn btn-create" onclick="createEventType()">+ Create Event</button>
+    </div>
+
+    <button class="btn btn-end" onclick="endEvent()">🏁 End Active Event</button>
+  </aside>
+
+  <main class="main">
+    <div class="header">
+      <div>
+        <h1 id="pageTitle">Dashboard</h1>
+        <div style="color: #64748b; margin-top: 5px;" id="pageSubtitle">Select an event</div>
+      </div>
+      <div style="display:flex; gap:15px; align-items:center;">
+        <input type="text" id="searchBar" placeholder="🔍 Search Roster..." onkeyup="refreshDashboard()">
+        <div id="liveCountBadge" class="live-count" style="display:none;">
+          <span id="countValue">0</span> Present
+        </div>
+      </div>
+    </div>
+
+    <div id="contentArea" class="grid"></div>
+  </main>
+
+  <script>
+    const API_URL = "/graphql";
+    let allEventsCache = [];
+
+    async function sendGQL(query) {
+      const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) });
+      return (await res.json()).data;
+    }
+
+    async function init() {
+      // 1. Load Leaders Only
+      const userData = await sendGQL(`query { people { id name role } }`);
+      const userSel = document.getElementById('userSelector');
+      userData.people.forEach(u => {
+        if (u.role === 'Leader' || u.role.includes('Pastor')) {
+           userSel.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+        }
+      });
+
+      // 2. Load Events
+      await loadEvents();
+    }
+
+    async function loadEvents() {
+  // 1. We ASK for the 'status' field now
+  const data = await sendGQL(`query { getAllEvents { id name status } }`);
+  const sel = document.getElementById('eventSelector');
+  sel.innerHTML = "";
+  allEventsCache = [];
+
+  if(data && data.getAllEvents.length > 0) {
+    data.getAllEvents.forEach(e => {
+        // 2. We CHECK the 'status' field (New Logic)
+        // We allow 'Active' OR null (in case the db is old)
+        if (e.status === 'Active' || !e.status) {
+            allEventsCache.push(e);
+            sel.innerHTML += `<option value="${e.id}">${e.name}</option>`;
+        }
+    });
+
+    // Only refresh if we found events
+    if(allEventsCache.length > 0) {
+        refreshDashboard();
+    } else {
+        sel.innerHTML = "<option value=''>No Active Events</option>";
+    }
+  } else {
+    sel.innerHTML = "<option value=''>No Active Events</option>";
+  }
+}
+
+    async function refreshDashboard() {
+      const eventId = document.getElementById('eventSelector').value;
+      if(!eventId) {
+        document.getElementById('contentArea').innerHTML = "<p>No active events found.</p>";
+        document.getElementById('liveCountBadge').style.display = 'none';
+        return;
+      }
+
+      const eventName = document.getElementById('eventSelector').selectedOptions[0].text;
+      document.getElementById('pageTitle').innerText = eventName;
+      document.getElementById('contentArea').className = "grid";
+
+      const data = await sendGQL(`
+        query {
+          people { id name role }
+          eventLiveRoster(eventId: ${eventId})
+          getRsvpList(eventId: ${eventId})
+          getActiveCount(eventId: ${eventId})
+        }
+      `);
+
+      document.getElementById('liveCountBadge').style.display = 'flex';
+      document.getElementById('countValue').innerText = data.getActiveCount;
+
+      let roster = data.people.map(p => ({
+        ...p,
+        isCheckedIn: data.eventLiveRoster.includes(p.id),
+        isRsvp: data.getRsvpList.includes(p.id)
+      }));
+
+      // Sort: CheckedIn > RSVP > Others
+      roster.sort((a, b) => {
+          if (a.isCheckedIn !== b.isCheckedIn) return a.isCheckedIn ? -1 : 1;
+          if (a.isRsvp !== b.isRsvp) return a.isRsvp ? -1 : 1;
+          return 0;
+      });
+
+      // Filter: Search Bar
+      const term = document.getElementById('searchBar').value.toLowerCase();
+      if(term) roster = roster.filter(p => p.name.toLowerCase().includes(term));
+
+      const container = document.getElementById('contentArea');
+      container.innerHTML = "";
+
+      roster.forEach(p => {
+        let cls = "absent", icon = "❌ No RSVP", btn = "Scan In", fn = "checkIn";
+
+        if (p.isCheckedIn) { cls = "checked-in"; icon = "✅ Present"; btn = "Scan Out"; fn = "checkOut"; }
+        else if (p.isRsvp) { cls = "rsvp-only"; icon = "✅ RSVP'd"; btn = "Scan In"; fn = "checkIn"; }
+
+        container.innerHTML += `
+          <div class="card ${cls}">
+            <div style="display:flex; justify-content:space-between;">
+                <strong>${p.name}</strong> <span>${icon}</span>
+            </div>
+            <small style="color:#64748b;">${p.role}</small>
+            <div style="margin-top:15px;">
+                <button class="btn btn-action" onclick="${fn}(${p.id})">${btn}</button>
+                <button class="btn btn-info" onclick="viewProfile(${p.id}, '${p.name}')">📄 View Info</button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    async function viewProfile(id, name) {
+        const data = await sendGQL(`query { getStudentProfile(studentId: ${id}) }`);
+        const p = JSON.parse(data.getStudentProfile || "{}");
+
+        document.getElementById('contentArea').className = "";
+        document.getElementById('contentArea').innerHTML = `
+            <div class="profile-view">
+                <h2>Info: ${name}</h2>
+                <div class="ro-label">Allergies</div><div class="ro-val">${p.allergies || 'None'}</div>
+                <div class="ro-label">Meds</div><div class="ro-val">${p.medical || 'None'}</div>
+                <div class="ro-label">Emergency Contact</div><div class="ro-val">${p.contactName || '--'}</div>
+                <div class="ro-label">Phone</div><div class="ro-val" style="color:#4f46e5;font-weight:bold;">${p.contactPhone || '--'}</div>
+                <button class="btn btn-action" onclick="refreshDashboard()">⬅ Back</button>
+            </div>
+        `;
+    }
+
+    async function checkIn(id) {
+      await sendGQL(`mutation { checkInStudent(eventId: ${document.getElementById('eventSelector').value}, studentId: ${id}) }`);
+      refreshDashboard();
+    }
+    async function checkOut(id) {
+      await sendGQL(`mutation { checkOutStudent(eventId: ${document.getElementById('eventSelector').value}, studentId: ${id}) }`);
+      refreshDashboard();
+    }
+    async function createEventType() {
+        const name = document.getElementById('newEventName').value;
+        if(!name) return;
+        const schema = JSON.stringify({ "fields": ["snack"], "required": [] }).replace(/"/g, '\\"');
+        await sendGQL(`mutation { createEventType(name: "${name}", schemaJson: "${schema}") }`);
+        alert("Event Created");
+        await loadEvents();
+    }
+    async function endEvent() {
+      const eid = document.getElementById('eventSelector').value;
+      if(!eid) return;
+      if(!confirm("End this event? Will save to MySQL and archive.")) return;
+      await sendGQL(`mutation { endEvent(eventId: ${eid}) }`);
+      alert("Event Ended");
+      await loadEvents();
+    }
+
+    init();
+  </script>
+</body>
+</html>
