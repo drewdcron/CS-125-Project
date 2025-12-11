@@ -5,7 +5,7 @@
   <title>YGMS Leader Portal</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    /* LEADER THEME: Dark Sidebar, Professional Grid */
+    /* LEADER THEME */
     :root { --primary: #4f46e5; --bg: #f3f4f6; --text: #1f2937; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; }
     body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
 
@@ -24,9 +24,11 @@
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
     .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 8px solid transparent; }
 
+    /* Card Colors */
     .card.checked-in { border-left-color: var(--success); background: #dcfce7; }
     .card.rsvp-only { border-left-color: var(--warning); background: #fffbeb; }
     .card.absent { border-left-color: var(--danger); background: #fee2e2; }
+    .card.leader-neutral { border-left-color: #94a3b8; background: #f8fafc; } /* Neutral grey for leaders */
 
     .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 10px; }
     .btn-create { background: var(--primary); color: white; }
@@ -108,32 +110,24 @@
     }
 
     async function loadEvents() {
-  // 1. We ASK for the 'status' field now
-  const data = await sendGQL(`query { getAllEvents { id name status } }`);
-  const sel = document.getElementById('eventSelector');
-  sel.innerHTML = "";
-  allEventsCache = [];
+      const data = await sendGQL(`query { getAllEvents { id name status } }`);
+      const sel = document.getElementById('eventSelector');
+      sel.innerHTML = "";
+      allEventsCache = [];
 
-  if(data && data.getAllEvents.length > 0) {
-    data.getAllEvents.forEach(e => {
-        // 2. We CHECK the 'status' field (New Logic)
-        // We allow 'Active' OR null (in case the db is old)
-        if (e.status === 'Active' || !e.status) {
-            allEventsCache.push(e);
-            sel.innerHTML += `<option value="${e.id}">${e.name}</option>`;
-        }
-    });
-
-    // Only refresh if we found events
-    if(allEventsCache.length > 0) {
-        refreshDashboard();
-    } else {
+      if(data && data.getAllEvents.length > 0) {
+        data.getAllEvents.forEach(e => {
+            if (e.status === 'Active' || !e.status) {
+                allEventsCache.push(e);
+                sel.innerHTML += `<option value="${e.id}">${e.name}</option>`;
+            }
+        });
+        if(allEventsCache.length > 0) refreshDashboard();
+        else sel.innerHTML = "<option value=''>No Active Events</option>";
+      } else {
         sel.innerHTML = "<option value=''>No Active Events</option>";
+      }
     }
-  } else {
-    sel.innerHTML = "<option value=''>No Active Events</option>";
-  }
-}
 
     async function refreshDashboard() {
       const eventId = document.getElementById('eventSelector').value;
@@ -165,14 +159,28 @@
         isRsvp: data.getRsvpList.includes(p.id)
       }));
 
-      // Sort: CheckedIn > RSVP > Others
+      // --- NEW SORTING LOGIC ---
+      // Map roles to numeric priority
+      const roleOrder = {
+          "Youth Pastor": 1,
+          "Leader": 2,
+          "Parent": 3,
+          "Volunteer": 4,
+          "Student": 5
+      };
+
       roster.sort((a, b) => {
+          // 1. Primary Sort: Status (Checked In > RSVP > Absent)
           if (a.isCheckedIn !== b.isCheckedIn) return a.isCheckedIn ? -1 : 1;
           if (a.isRsvp !== b.isRsvp) return a.isRsvp ? -1 : 1;
-          return 0;
+
+          // 2. Secondary Sort: Role (Pastor > Leader > Parent > Volunteer > Student)
+          // Default to 99 if role is unknown so they go to bottom
+          const roleA = roleOrder[a.role] || 99;
+          const roleB = roleOrder[b.role] || 99;
+          return roleA - roleB;
       });
 
-      // Filter: Search Bar
       const term = document.getElementById('searchBar').value.toLowerCase();
       if(term) roster = roster.filter(p => p.name.toLowerCase().includes(term));
 
@@ -181,9 +189,28 @@
 
       roster.forEach(p => {
         let cls = "absent", icon = "❌ No RSVP", btn = "Scan In", fn = "checkIn";
+        const isLeader = (p.role === 'Leader' || p.role.includes('Pastor'));
 
-        if (p.isCheckedIn) { cls = "checked-in"; icon = "✅ Present"; btn = "Scan Out"; fn = "checkOut"; }
-        else if (p.isRsvp) { cls = "rsvp-only"; icon = "✅ RSVP'd"; btn = "Scan In"; fn = "checkIn"; }
+        // 1. Determine Basic State
+        if (p.isCheckedIn) {
+            cls = "checked-in";
+            icon = "✅ Present";
+            btn = "Scan Out";
+            fn = "checkOut";
+        } else if (p.isRsvp) {
+            cls = "rsvp-only";
+            icon = "✅ RSVP'd";
+            btn = "Scan In";
+            fn = "checkIn";
+        }
+
+        // 2. OVERRIDE FOR LEADERS
+        if (isLeader) {
+             if (!p.isCheckedIn) {
+                 cls = "leader-neutral";
+                 icon = "🛡️ Leader";
+             }
+        }
 
         container.innerHTML += `
           <div class="card ${cls}">

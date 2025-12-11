@@ -324,7 +324,7 @@ class Mutation:
 
         db = SessionLocal()
         try:
-            # 1. SAVE ATTENDANCE (Redis -> MySQL)
+            # 1. SAVE ATTENDANCE
             key_roster = f"event:{event_id}:checkedIn"
             ids = redis_client.smembers(key_roster)
 
@@ -336,14 +336,13 @@ class Mutation:
                     count += 1
             db.commit()
 
-            # 2. UPDATE STATUS TO 'ENDED' (The Soft Delete)
-            # We do NOT use db.delete() anymore. We just mark it as Ended.
+            # 2. UPDATE STATUS (Soft Delete)
             event = db.query(EventTypeORM).filter_by(ID=event_id).first()
             event_name = "Unknown"
 
             if event:
                 event_name = event.Name
-                event.Status = "Ended"  # <--- This is the key change
+                event.Status = "Ended"  # <--- Change this from db.delete()
                 db.commit()
 
             # 3. CLEANUP REDIS
@@ -352,7 +351,7 @@ class Mutation:
             redis_client.delete(f"event:{event_id}:checkOutTimes")
             redis_client.delete(f"event:{event_id}:rsvp")
 
-            return f"Event '{event_name}' marked as Ended. {count} records saved."
+            return f"Event '{event_name}' ended. {count} records saved."
 
         except Exception as e:
             db.rollback()
@@ -395,3 +394,10 @@ if __name__ == "__main__":
     print(f"STARTUP CHECK: Connecting to MySQL on Port {settings.MYSQL_PORT}")
 
     uvicorn.run(app, host="127.0.0.1", port=8005)
+
+
+# Work on
+# fix the multiple rsvp's
+# recreate readme
+# make create user for leaders and guests
+
