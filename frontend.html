@@ -6,7 +6,7 @@
   <title>YGMS Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    :root { --primary: #4f46e5; --bg: #f3f4f6; --text: #1f2937; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; }
+    :root { --primary: #4f46e5; --bg: #f3f4f6; --text: #1f2937; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; --info: #0ea5e9; }
     body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
 
     /* Sidebar */
@@ -14,8 +14,8 @@
     .logo { font-size: 1.8rem; font-weight: 800; color: #60a5fa; letter-spacing: -1px; }
 
     label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 5px; display: block; }
-    select, input { width: 100%; padding: 12px; border-radius: 8px; background: #334155; color: white; border: 1px solid #475569; outline: none; box-sizing: border-box; }
-    select:focus, input:focus { border-color: #60a5fa; }
+    select, input, textarea { width: 100%; padding: 12px; border-radius: 8px; background: #334155; color: white; border: 1px solid #475569; outline: none; box-sizing: border-box; font-family: inherit; }
+    select:focus, input:focus, textarea:focus { border-color: #60a5fa; }
 
     /* Main Area */
     .main { flex-grow: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; }
@@ -35,18 +35,14 @@
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
 
     /* Roster Cards */
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 8px solid transparent; transition: transform 0.2s; position: relative; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 8px solid transparent; transition: transform 0.2s; position: relative; display: flex; flex-direction: column; }
     .card:hover { transform: translateY(-2px); }
 
     /* --- STATUS COLORS --- */
-    /* 1. Fully Checked In (Green) */
     .card.checked-in { border-left-color: var(--success); background: #dcfce7; }
-
-    /* 2. RSVP'd but NOT Checked In (Yellow/Neutral) */
     .card.rsvp-only { border-left-color: var(--warning); background: #fffbeb; }
-
-    /* 3. No RSVP, Not Checked In (Red/Grey) */
     .card.absent { border-left-color: var(--danger); background: #fee2e2; }
+    .card.leader-view { border-left-color: #64748b; background: #f1f5f9; } /* Default style for leaders */
 
     /* RSVP Icon Badge */
     .rsvp-badge { font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; }
@@ -62,11 +58,22 @@
     .event-info h3 { margin: 0 0 5px 0; font-size: 1.2rem; }
     .event-info span { color: #64748b; font-size: 0.9rem; }
 
+    /* Profile Form (Student View) */
+    .profile-form { background: white; padding: 30px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { color: #475569; font-size: 0.85rem; margin-bottom: 8px; }
+    .form-group input, .form-group textarea { background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; }
+
+    /* Read Only Profile View (Leader) */
+    .profile-view-readonly { background: white; padding: 30px; border-radius: 12px; max-width: 600px; margin: 0 auto; }
+    .readonly-field { margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+    .readonly-label { color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: bold; }
+    .readonly-value { font-size: 1.1rem; color: #1e293b; margin-top: 5px; }
+
     /* Buttons */
     .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 10px; }
     .btn-action { background: #e2e8f0; color: #475569; }
 
-    /* Interactive Button Colors */
     .card.checked-in .btn-action { background: #166534; color: white; }
     .card.rsvp-only .btn-action { background: #3b82f6; color: white; }
     .card.absent .btn-action { background: #991b1b; color: white; }
@@ -74,8 +81,14 @@
     .btn-create { background: var(--primary); color: white; margin-top: 5px; }
     .btn-end { background: var(--danger); color: white; margin-top: auto; }
     .btn-rsvp { background: var(--primary); color: white; padding: 12px 25px; width: auto; margin-top: 0; }
+    .btn-profile { background: var(--info); color: white; margin-top: 5px; }
+    .btn-save { background: var(--success); color: white; font-size: 1rem; }
+    .btn-cancel { background: #94a3b8; color: white; margin-top: 10px; }
+    .btn-info { background: white; border: 1px solid #cbd5e1; color: #475569; margin-top: 5px; }
+    .btn-info:hover { background: #f1f5f9; }
 
     .admin-only { display: none; }
+    .student-only { display: none; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
   </style>
 </head>
@@ -87,6 +100,11 @@
     <div>
       <label for="userSelector">Logged in as:</label>
       <select id="userSelector" onchange="switchUser()"></select>
+    </div>
+
+    <div class="student-only">
+      <button class="btn btn-profile" onclick="renderProfilePage()">👤 My Profile / Med Info</button>
+      <button class="btn btn-action" onclick="renderStudentEventList()">📅 Upcoming Events</button>
     </div>
 
     <div class="admin-only">
@@ -143,7 +161,6 @@
     }
 
     async function init() {
-      // Load Users
       const userData = await sendGQL(`query { people { id name role } }`);
       const userSel = document.getElementById('userSelector');
       if(userData) {
@@ -182,14 +199,15 @@
       currentUserId = sel.options[sel.selectedIndex].getAttribute('data-id');
 
       const isAdmin = (currentUserRole === 'Leader' || currentUserRole.includes('Pastor'));
-      const adminEls = document.querySelectorAll('.admin-only');
-      adminEls.forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+
+      document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+      document.querySelectorAll('.student-only').forEach(el => el.style.display = isAdmin ? 'none' : 'block');
 
       if (isAdmin) refreshDashboard();
       else renderStudentEventList();
     }
 
-    // --- LEADER VIEW ---
+    // --- LEADER VIEW (Dashboard) ---
     async function refreshDashboard() {
       if(currentUserRole !== 'Leader' && !currentUserRole.includes('Pastor')) return;
 
@@ -205,7 +223,6 @@
       document.getElementById('pageSubtitle').innerText = `Managing ID: ${eventId}`;
       document.getElementById('contentArea').className = "grid";
 
-      // 1. Fetch BOTH lists: Live Roster (Checked In) AND RSVP List
       const data = await sendGQL(`
         query {
           people { id name role }
@@ -218,32 +235,28 @@
       document.getElementById('liveCountBadge').style.display = 'flex';
       document.getElementById('countValue').innerText = data.getActiveCount;
 
-      // 2. Process User States
       let rosterList = data.people.map(p => {
         p.isCheckedIn = data.eventLiveRoster.includes(p.id);
         p.isRsvp = data.getRsvpList.includes(p.id);
         return p;
       });
 
-      // 3. SORTING LOGIC: Checked In > RSVP'd > Others
       rosterList.sort((a, b) => {
-          if (a.isCheckedIn !== b.isCheckedIn) return a.isCheckedIn ? -1 : 1; // Top Priority
-          if (a.isRsvp !== b.isRsvp) return a.isRsvp ? -1 : 1; // Second Priority
+          if (a.isCheckedIn !== b.isCheckedIn) return a.isCheckedIn ? -1 : 1;
+          if (a.isRsvp !== b.isRsvp) return a.isRsvp ? -1 : 1;
           return 0;
       });
 
-      // 4. Filtering (Search)
       const searchTerm = document.getElementById('searchBar').value.toLowerCase();
-      if(searchTerm) {
-          rosterList = rosterList.filter(p => p.name.toLowerCase().includes(searchTerm));
-      }
+      if(searchTerm) rosterList = rosterList.filter(p => p.name.toLowerCase().includes(searchTerm));
 
-      // 5. Render
       const container = document.getElementById('contentArea');
       container.innerHTML = "";
 
       rosterList.forEach(p => {
-        // Determine Visual State
+        // --- 1. Leader Check: Hide RSVP icon for Leaders ---
+        const isTargetLeader = (p.role === 'Leader' || p.role.includes('Pastor'));
+
         let cardClass = "absent";
         let statusIcon = "<span class='rsvp-no'>❌ No RSVP</span>";
         let btnText = "Scan In";
@@ -257,8 +270,14 @@
         } else if (p.isRsvp) {
             cardClass = "rsvp-only";
             statusIcon = "<span class='rsvp-yes'>✅ RSVP'd</span>";
-            btnText = "Scan In"; // Still need to scan them in
+            btnText = "Scan In";
             fn = "checkIn";
+        }
+
+        // Override visual style if the person in the card is a leader
+        if (isTargetLeader) {
+            cardClass = "leader-view";
+            statusIcon = "<span style='color:#64748b'>🛡️ Leader</span>";
         }
 
         container.innerHTML += `
@@ -268,13 +287,59 @@
                 ${statusIcon}
             </div>
             <small style="color:#64748b;">${p.role}</small>
-            <button class="btn btn-action" onclick="${fn}(${p.id})">${btnText}</button>
+
+            <div style="margin-top:auto;">
+                <button class="btn btn-action" onclick="${fn}(${p.id})">${btnText}</button>
+                <button class="btn btn-info" onclick="viewUserProfile(${p.id}, '${p.name}')">📄 View Info</button>
+            </div>
           </div>
         `;
       });
     }
 
-    // --- STUDENT VIEW ---
+    // --- LEADER VIEW (Read-Only Profile) ---
+    async function viewUserProfile(id, name) {
+        // Fetch from Mongo
+        const data = await sendGQL(`query { getStudentProfile(studentId: ${id}) }`);
+        const profile = JSON.parse(data.getStudentProfile || "{}");
+
+        document.getElementById('contentArea').className = ""; // Remove grid
+        document.getElementById('contentArea').innerHTML = `
+            <div class="profile-view-readonly">
+                <h2 style="margin-top:0;">Medical Info: ${name}</h2>
+                <hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:20px;">
+
+                <div class="readonly-field">
+                    <div class="readonly-label">Allergies</div>
+                    <div class="readonly-value">${profile.allergies || 'None listed'}</div>
+                </div>
+
+                <div class="readonly-field">
+                    <div class="readonly-label">Medical Conditions / Meds</div>
+                    <div class="readonly-value">${profile.medical || 'None listed'}</div>
+                </div>
+
+                <div class="readonly-field">
+                    <div class="readonly-label">Emergency Contact Name</div>
+                    <div class="readonly-value">${profile.contactName || 'Not provided'}</div>
+                </div>
+
+                <div class="readonly-field">
+                    <div class="readonly-label">Emergency Contact Phone</div>
+                    <div class="readonly-value" style="color:var(--primary); font-weight:bold;">${profile.contactPhone || 'Not provided'}</div>
+                </div>
+
+                <div class="readonly-field">
+                    <div class="readonly-label">Last Updated</div>
+                    <div class="readonly-value" style="font-size:0.9rem; color:#94a3b8;">${profile.lastUpdated || 'Never'}</div>
+                </div>
+
+                <button class="btn btn-action" onclick="refreshDashboard()">⬅ Back to Roster</button>
+            </div>
+        `;
+    }
+
+    // --- STUDENT VIEW (Event List) ---
     function renderStudentEventList() {
       document.getElementById('pageTitle').innerText = "Upcoming Events";
       document.getElementById('pageSubtitle').innerText = "Select an event to RSVP";
@@ -300,6 +365,70 @@
           </div>
         `;
       });
+    }
+
+    // --- STUDENT VIEW (Profile Editor) ---
+    async function renderProfilePage() {
+      document.getElementById('pageTitle').innerText = "My Profile";
+      document.getElementById('pageSubtitle').innerText = "Manage medical info & allergies";
+      document.getElementById('liveCountBadge').style.display = 'none';
+
+      const container = document.getElementById('contentArea');
+      container.className = "";
+      container.innerHTML = "<p>Loading profile...</p>";
+
+      const data = await sendGQL(`query { getStudentProfile(studentId: ${currentUserId}) }`);
+      const profile = JSON.parse(data.getStudentProfile || "{}");
+
+      // --- 2. Split Contact Fields ---
+      container.innerHTML = `
+        <div class="profile-form">
+            <div class="form-group">
+                <label>Allergies</label>
+                <input type="text" id="profAllergies" value="${profile.allergies || ''}" placeholder="e.g. Peanuts, Bee Stings">
+            </div>
+            <div class="form-group">
+                <label>Medical Conditions / Meds</label>
+                <textarea id="profMeds" rows="3" placeholder="e.g. Inhaler for Asthma">${profile.medical || ''}</textarea>
+            </div>
+
+            <div style="display:flex; gap:15px;">
+                <div class="form-group" style="flex:1;">
+                    <label>Emergency Contact Name</label>
+                    <input type="text" id="profContactName" value="${profile.contactName || ''}" placeholder="e.g. John Doe">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Emergency Contact Phone</label>
+                    <input type="text" id="profContactPhone" value="${profile.contactPhone || ''}" placeholder="e.g. 555-0199">
+                </div>
+            </div>
+
+            <button class="btn btn-save" onclick="saveProfile()">💾 Save Profile</button>
+            <button class="btn btn-cancel" onclick="renderStudentEventList()">Cancel</button>
+        </div>
+      `;
+    }
+
+    async function saveProfile() {
+        const allergies = document.getElementById('profAllergies').value;
+        const medical = document.getElementById('profMeds').value;
+        const contactName = document.getElementById('profContactName').value;
+        const contactPhone = document.getElementById('profContactPhone').value;
+
+        // Bundle into JSON
+        const dataPacket = {
+            "allergies": allergies,
+            "medical": medical,
+            "contactName": contactName,
+            "contactPhone": contactPhone,
+            "lastUpdated": new Date().toISOString()
+        };
+
+        const dataJson = JSON.stringify(dataPacket).replace(/"/g, '\\"');
+        const res = await sendGQL(`mutation { updateStudentProfile(studentId: ${currentUserId}, dataJson: "${dataJson}") }`);
+
+        alert(res.updateStudentProfile);
+        renderStudentEventList();
     }
 
     // --- ACTIONS ---
@@ -344,11 +473,7 @@
       const dataPacket = { "snack": snack, "timestamp": new Date().toISOString() };
       const dataJson = JSON.stringify(dataPacket).replace(/"/g, '\\"');
 
-      // 1. Save Form (Mongo)
       await sendGQL(`mutation { submitCustomData(eventId: ${eventId}, studentId: ${currentUserId}, dataJson: "${dataJson}") }`);
-
-      // 2. RSVP (Redis) - Calls the NEW function!
-      // This marks them as "Interested" but NOT "Present"
       await sendGQL(`mutation { rsvpStudent(eventId: ${eventId}, studentId: ${currentUserId}) }`);
 
       alert("RSVP Confirmed! See you there!");
