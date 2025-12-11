@@ -5,146 +5,212 @@
   <title>YGMS Guest Portal</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    /* GUEST THEME: Lighter, Mobile Friendly */
-    :root { --primary: #0ea5e9; --bg: #f8fafc; --text: #334155; --success: #22c55e; }
+    /* GUEST THEME */
+    :root { --primary: #0ea5e9; --bg: #f8fafc; --text: #334155; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; }
     body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-
     .sidebar { width: 280px; background: white; border-right: 1px solid #e2e8f0; padding: 25px; display: flex; flex-direction: column; gap: 20px; }
     .logo { font-size: 1.5rem; font-weight: 800; color: var(--primary); letter-spacing: -1px; margin-bottom: 10px; }
-
     label { font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px; display: block; }
     select { width: 100%; padding: 12px; border-radius: 8px; background: #f1f5f9; border: 1px solid #cbd5e1; outline: none; }
-
     .main { flex-grow: 1; padding: 40px; overflow-y: auto; max-width: 800px; margin: 0 auto; }
     .header { margin-bottom: 30px; }
     h1 { font-size: 1.8rem; color: #0f172a; margin: 0; }
-
-    /* Event List Item */
-    .event-item { background: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); }
+    input.search-bar { width: 100%; padding: 10px; margin-top: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 1rem; }
+    .event-item { background: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); }
     .event-item h3 { margin: 0; font-size: 1.2rem; }
-
-    /* Profile Form */
     .form-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
     .form-group { margin-bottom: 20px; }
     input, textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; font-family: inherit; box-sizing: border-box; }
-
-    /* Buttons */
     .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: transform 0.1s; }
     .btn:active { transform: scale(0.98); }
-    .btn-rsvp { background: var(--primary); color: white; width: auto; padding: 10px 25px; }
+    .btn-rsvp { background: var(--primary); color: white; width: auto; padding: 8px 20px; }
+    .btn-unrsvp { background: #cbd5e1; color: #475569; width: auto; padding: 8px 20px; }
+    .btn-disabled { background: #e2e8f0; color: #94a3b8; width: auto; padding: 8px 20px; cursor: not-allowed; }
     .btn-nav { background: #f1f5f9; color: #475569; text-align: left; }
     .btn-nav:hover { background: #e2e8f0; }
     .btn-save { background: var(--success); color: white; font-size: 1rem; margin-top: 10px; }
+    .status-badge { font-weight: bold; color: var(--success); margin-right: 10px; font-size: 0.9rem; }
   </style>
 </head>
 <body>
 
   <aside class="sidebar">
-    <div class="logo">👋 WELCOME</div>
-
+    <div class="logo">YGMS GUEST</div>
     <div>
-      <label>I am:</label>
-      <select id="userSelector" onchange="currentUserId = this.value"></select>
+      <label for="userSelector">I am:</label>
+      <select id="userSelector" onchange="currentUserId = this.value; renderEvents()"></select>
     </div>
-
     <hr style="border:0; border-top:1px solid #e2e8f0; width:100%;">
-
     <button class="btn btn-nav" onclick="renderEvents()">📅 Upcoming Events</button>
-    <button class="btn btn-nav" onclick="renderProfile()">👤 My Profile / Medical</button>
+    <button class="btn btn-nav" onclick="renderProfile()">👤 My Profile</button>
   </aside>
 
   <main class="main">
     <div class="header">
       <h1 id="pageTitle">Upcoming Events</h1>
       <p id="pageSubtitle" style="color:#64748b;">Select an event below to RSVP</p>
+      <input type="text" id="guestSearch" class="search-bar" placeholder="🔍 Search Events (Name, Location, Topic)..." onkeyup="renderEvents()">
     </div>
-
     <div id="contentArea"></div>
   </main>
 
   <script>
     const API_URL = "/graphql";
     let currentUserId = null;
+    const RSVP_REQUIRED_ROLES = ["Student", "Volunteer", "Parent", "Youth", "ParentGuardian"];
 
     async function sendGQL(query) {
       const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) });
-      return (await res.json()).data;
+      const json = await res.json();
+      if (json.errors) console.error("GraphQL Errors:", json.errors);
+      return json.data;
+    }
+
+    // PHONE FORMATTER
+    function formatPhoneInput(event) {
+        const input = event.target;
+        let value = input.value.replace(/\D/g, '');
+        if (value.length > 10) value = value.substring(0, 10);
+        if (value.length > 6) input.value = `(${value.substring(0, 3)}) ${value.substring(3, 6)}-${value.substring(6)}`;
+        else if (value.length > 3) input.value = `(${value.substring(0, 3)}) ${value.substring(3)}`;
+        else if (value.length > 0) input.value = `(${value}`;
+        else input.value = '';
     }
 
     async function init() {
-      // 1. Load Guests Only
       const userData = await sendGQL(`query { people { id name role } }`);
       const userSel = document.getElementById('userSelector');
-      userData.people.forEach(u => {
-        if (u.role !== 'Leader' && !u.role.includes('Pastor')) {
-           userSel.innerHTML += `<option value="${u.id}">${u.name}</option>`;
-        }
-      });
-      // Set default ID
-      currentUserId = userSel.value;
+      if (!userData || !userData.people) { userSel.innerHTML = `<option value="">--- API Failed ---</option>`; return; }
 
-      // 2. Load View
-      renderEvents();
+      // SORTING: Youth/Student(1) -> Volunteer(2) -> Parent(3) -> Leader(4) -> Pastor(5) -> Security(6) -> Admin(7)
+      const roleOrder = { "Youth": 1, "Student": 1, "Volunteer": 2, "Parent": 3, "ParentGuardian": 3, "Guardian": 3, "Leader": 4, "Youth Pastor": 5, "Pastor": 5, "Security": 6, "Admin": 7 };
+
+      const sortedPeople = [...userData.people].sort((a, b) => {
+        const orderA = roleOrder[a.role] || 99;
+        const orderB = roleOrder[b.role] || 99;
+        if(orderA !== orderB) return orderA - orderB;
+        return a.name.localeCompare(b.name);
+      });
+
+      userSel.innerHTML = '<option value="">-- Select Your Name --</option>';
+      sortedPeople.forEach(u => {
+           let displayName = u.name;
+           if (!u.name.toLowerCase().includes(u.role.toLowerCase())) { displayName = `${u.name} (${u.role})`; }
+           userSel.innerHTML += `<option value="${u.id}" data-role="${u.role}">${displayName}</option>`;
+      });
     }
 
     async function renderEvents() {
-  document.getElementById('pageTitle').innerText = "Upcoming Events";
-  document.getElementById('pageSubtitle').innerText = "Select an event to RSVP";
+        document.getElementById('pageTitle').innerText = "Upcoming Events";
+        document.getElementById('guestSearch').style.display = 'block'; // Show Search
+        const container = document.getElementById('contentArea');
+        container.innerHTML = "Loading events...";
+        const searchTerm = document.getElementById('guestSearch').value.toLowerCase();
 
-  // 1. Ask for 'status'
-  const data = await sendGQL(`query { getAllEvents { id name status } }`);
-  const container = document.getElementById('contentArea');
-  container.innerHTML = "";
+        if (!currentUserId) { container.innerHTML = "<p>Please select your name from the sidebar.</p>"; return; }
 
-  if(data && data.getAllEvents && data.getAllEvents.length > 0) {
-    data.getAllEvents.forEach(e => {
-        // 2. Filter by 'status'
-        if (e.status === 'Active' || !e.status) {
-            container.innerHTML += `
-              <div class="event-item">
-                <div>
-                  <h3>${e.name}</h3>
-                  <span style="color:#94a3b8; font-size:0.9rem;">Event ID: ${e.id}</span>
-                </div>
-                <button class="btn btn-rsvp" onclick="rsvp(${e.id})">RSVP</button>
-              </div>
-            `;
-        }
-    });
-  } else {
-    container.innerHTML = "<p>No upcoming events.</p>";
-  }
-}
+        const userOption = document.querySelector(`#userSelector option[value="${currentUserId}"]`);
+        const userRole = userOption ? userOption.dataset.role : "";
+        const roleNeedsRsvp = RSVP_REQUIRED_ROLES.includes(userRole);
+
+        const data = await sendGQL(`query { getAllEvents { id name status type location time description } }`);
+        if(data && data.getAllEvents && data.getAllEvents.length > 0) {
+            container.innerHTML = "";
+            const activeEvents = data.getAllEvents.filter(e => e.status === 'Active');
+            if (activeEvents.length === 0) { container.innerHTML = "<p>No active events.</p>"; return; }
+
+            for(const e of activeEvents) {
+                if (e.type === 'Meeting') continue;
+
+                let parsedDesc = { generic: e.description || '', specialized: {} };
+                try { const parsed = JSON.parse(e.description); if (parsed && typeof parsed === 'object') parsedDesc = parsed; } catch (err) { parsedDesc.generic = e.description; }
+
+                const searchString = `${e.name} ${e.location} ${parsedDesc.generic}`.toLowerCase();
+                if (searchTerm && !searchString.includes(searchTerm)) continue;
+
+                let detailsHtml = '';
+                const spec = parsedDesc.specialized;
+
+                // EVENT LOGIC FLAGS
+                let eventRegistrationRequired = true; // Default assumption
+
+                if (e.type === 'Small Group') {
+                    if(spec.Theme) detailsHtml += `📚 <strong>Theme:</strong> ${spec.Theme} | `;
+                    if(spec.LeaderName) detailsHtml += `👤 <strong>Leader:</strong> ${spec.LeaderName} | `;
+                    if(spec.DayOfWeek) detailsHtml += `🗓️ ${spec.DayOfWeek}`;
+                } else if (e.type === 'One-Time Event') {
+                    if(spec.Cost) detailsHtml += `💰 <strong>Cost:</strong> $${parseFloat(spec.Cost).toFixed(2)} | `;
+
+                    // Check if registration is explicitly NOT required
+                    if(spec.RegistrationRequired === false) {
+                        eventRegistrationRequired = false;
+                        detailsHtml += `📝 <strong>Reg Required:</strong> No`;
+                    } else {
+                        detailsHtml += `📝 <strong>Reg Required:</strong> Yes`;
+                    }
+                }
+
+                let actionArea = '';
+
+                // 1. If the EVENT does not require registration (One-Time Event setting)
+                if (!eventRegistrationRequired) {
+                    actionArea = `<button class="btn btn-disabled" disabled>No Registration Needed</button>`;
+                }
+                // 2. If the USER ROLE does not require registration (Leader/Pastor)
+                else if (!roleNeedsRsvp) {
+                    actionArea = `<button class="btn btn-disabled" disabled>RSVP Not Required</button>`;
+                }
+                // 3. Otherwise, show RSVP buttons
+                else {
+                    const rData = await sendGQL(`query { getRsvpList(eventId: ${e.id}) }`);
+                    const isRsvped = rData && rData.getRsvpList ? rData.getRsvpList.includes(parseInt(currentUserId)) : false;
+                    if (isRsvped) actionArea = `<div style="display:flex; align-items:center;"><span class="status-badge">✅ You are going</span><button class="btn btn-unrsvp" onclick="unRsvp(${e.id})">Cancel</button></div>`;
+                    else actionArea = `<button class="btn btn-rsvp" onclick="rsvp(${e.id})">RSVP Now</button>`;
+                }
+
+                const timeString = e.time ? new Date(e.time).toLocaleString() : 'TBD';
+
+                container.innerHTML += `
+                    <div class="event-item">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div><h3 style="margin:0">${e.name}</h3><div style="font-size:0.8rem; color:var(--primary); font-weight:bold; margin-bottom:5px;">${e.type || 'General'}</div></div>
+                            ${actionArea}
+                        </div>
+                        <div style="margin-top:10px; font-size:0.9rem; color:#64748b;"><strong>📍 Location:</strong> ${e.location || 'TBD'} | <strong>🕒 Time:</strong> ${timeString}</div>
+                        <p style="margin:10px 0 5px 0; font-size:0.85rem; color:#334155;">${detailsHtml}</p>
+                        <p style="margin:0; font-size:0.9rem; color:#64748b;">${parsedDesc.generic}</p>
+                    </div>`;
+            }
+            if (container.innerHTML === "") container.innerHTML = "<p>No events found matching your search.</p>";
+        } else container.innerHTML = "<p>No upcoming events.</p>";
+    }
 
     async function renderProfile() {
+      document.getElementById('guestSearch').style.display = 'none'; // Hide Search
       document.getElementById('pageTitle').innerText = "My Profile";
-      document.getElementById('pageSubtitle').innerText = "Manage medical info (Saved to MongoDB)";
+      document.getElementById('pageSubtitle').innerText = "Manage medical info";
       const container = document.getElementById('contentArea');
       container.innerHTML = "Loading...";
-
       const data = await sendGQL(`query { getStudentProfile(studentId: ${currentUserId}) }`);
       const p = JSON.parse(data.getStudentProfile || "{}");
-
       container.innerHTML = `
         <div class="form-box">
+            <h3 style="margin-top:0;">Medical Information</h3>
             <div class="form-group"><label>Allergies</label><input id="pAllergies" value="${p.allergies||''}"></div>
             <div class="form-group"><label>Meds/Conditions</label><textarea id="pMeds" rows="3">${p.medical||''}</textarea></div>
-            <div style="display:flex; gap:15px;">
-                <div class="form-group" style="flex:1;"><label>Emergency Name</label><input id="pName" value="${p.contactName||''}"></div>
-                <div class="form-group" style="flex:1;"><label>Emergency Phone</label><input id="pPhone" value="${p.contactPhone||''}"></div>
-            </div>
+            <div class="form-group"><label>Emergency Contact Name</label><input id="pContactName" value="${p.contactName||''}"></div>
+            <div class="form-group"><label>Emergency Phone</label>
+            <input id="pContactPhone" value="${p.contactPhone||''}" placeholder="(555) 123-4567" maxlength="14" oninput="formatPhoneInput(event)"></div>
             <button class="btn btn-save" onclick="saveProfile()">💾 Save Changes</button>
-        </div>
-      `;
+        </div>`;
     }
 
     async function saveProfile() {
         const packet = {
             allergies: document.getElementById('pAllergies').value,
             medical: document.getElementById('pMeds').value,
-            contactName: document.getElementById('pName').value,
-            contactPhone: document.getElementById('pPhone').value,
-            lastUpdated: new Date().toISOString()
+            contactName: document.getElementById('pContactName').value,
+            contactPhone: document.getElementById('pContactPhone').value
         };
         const json = JSON.stringify(packet).replace(/"/g, '\\"');
         await sendGQL(`mutation { updateStudentProfile(studentId: ${currentUserId}, dataJson: "${json}") }`);
@@ -152,17 +218,17 @@
     }
 
     async function rsvp(eid) {
-      const snack = prompt("What snacks do you prefer?", "Chips");
-      if(!snack) return;
-
-      const json = JSON.stringify({ snack, timestamp: new Date().toISOString() }).replace(/"/g, '\\"');
-
-      // 1. Mongo (Snacks)
-      await sendGQL(`mutation { submitCustomData(eventId: ${eid}, studentId: ${currentUserId}, dataJson: "${json}") }`);
-      // 2. Redis (RSVP)
+      const snack = prompt("Optional: Preferred snack?");
+      const json = JSON.stringify({ snack: snack || "None", timestamp: new Date().toISOString() }).replace(/"/g, '\\"');
       await sendGQL(`mutation { rsvpStudent(eventId: ${eid}, studentId: ${currentUserId}) }`);
+      await sendGQL(`mutation { submitCustomData(eventId: ${eid}, studentId: ${currentUserId}, dataJson: "${json}") }`);
+      alert("RSVP Sent!"); renderEvents();
+    }
 
-      alert("RSVP Sent! Leaders have been notified.");
+    async function unRsvp(eid) {
+        if(!confirm("Cancel RSVP?")) return;
+        await sendGQL(`mutation { unRsvpStudent(eventId: ${eid}, studentId: ${currentUserId}) }`);
+        alert("RSVP Cancelled."); renderEvents();
     }
 
     init();

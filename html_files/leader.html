@@ -6,267 +6,468 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     /* LEADER THEME */
-    :root { --primary: #4f46e5; --bg: #f3f4f6; --text: #1f2937; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; }
+    :root { --primary: #4f46e5; --bg: #f3f4f6; --text: #1f2937; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; --info: #0ea5e9; }
     body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-
-    .sidebar { width: 280px; background: #1e293b; color: #f1f5f9; padding: 25px; display: flex; flex-direction: column; gap: 20px; box-shadow: 4px 0 10px rgba(0,0,0,0.1); }
-    .logo { font-size: 1.5rem; font-weight: 800; color: #60a5fa; letter-spacing: -1px; margin-bottom: 10px; }
-
-    label { font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px; display: block; }
-    select, input { width: 100%; padding: 12px; border-radius: 8px; background: #334155; color: white; border: 1px solid #475569; outline: none; box-sizing: border-box; }
-
-    .main { flex-grow: 1; padding: 40px; overflow-y: auto; }
+    .sidebar { width: 280px; background: #1e293b; color: #f1f5f9; padding: 25px; display: flex; flex-direction: column; gap: 15px; box-shadow: 4px 0 10px rgba(0,0,0,0.1); overflow-y: auto; }
+    .logo { font-size: 1.5rem; font-weight: 800; color: #60a5fa; letter-spacing: -1px; margin-bottom: 5px; }
+    label { font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 2px; display: block; }
+    select, input, textarea { width: 100%; padding: 10px; border-radius: 8px; background: #334155; color: white; border: 1px solid #475569; outline: none; box-sizing: border-box; font-size: 0.9rem; }
+    .main { flex-grow: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; }
     .header { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-
-    #searchBar { background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 10px 15px; width: 250px; }
-    .live-count { background: var(--success); color: white; padding: 8px 16px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
-
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 8px solid transparent; }
-
-    /* Card Colors */
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 8px solid transparent; display: flex; flex-direction: column; }
     .card.checked-in { border-left-color: var(--success); background: #dcfce7; }
     .card.rsvp-only { border-left-color: var(--warning); background: #fffbeb; }
     .card.absent { border-left-color: var(--danger); background: #fee2e2; }
-    .card.leader-neutral { border-left-color: #94a3b8; background: #f8fafc; } /* Neutral grey for leaders */
-
-    .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 10px; }
+    .card.leader-neutral { border-left-color: #94a3b8; background: #f8fafc; }
+    .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 8px; }
     .btn-create { background: var(--primary); color: white; }
-    .btn-end { background: var(--danger); color: white; margin-top: auto; }
-    .btn-action { background: #e2e8f0; color: #475569; }
-    .card.checked-in .btn-action { background: #166534; color: white; }
-    .btn-info { background: white; border: 1px solid #cbd5e1; color: #475569; margin-top: 5px; }
-
-    /* Read Only Profile View */
-    .profile-view { background: white; padding: 30px; border-radius: 12px; max-width: 600px; margin: 0 auto; }
-    .ro-label { color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: bold; }
-    .ro-val { font-size: 1.1rem; color: #1e293b; margin-top: 5px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+    .btn-end { background: var(--danger); color: white; margin-top: 5px; }
+    .btn-info { background: white; border: 1px solid #cbd5e1; color: #475569; }
+    .btn-profile { background: var(--info); color: white; }
+    .btn-nav { background: #334155; color: #cbd5e1; text-align: left; border: 1px solid #475569; }
+    .btn-nav:hover { background: #475569; color: white; }
+    .btn-delete { background: var(--danger); color: white; }
+    .btn-danger-toggle { background: #94a3b8; color: white; }
+    .event-item { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: white; padding: 30px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .modal-content label { color: #334155; }
+    .modal-content input, .modal-content textarea { background: #f1f5f9; color: #1f2937; border: 1px solid #cbd5e1; }
   </style>
 </head>
 <body>
 
   <aside class="sidebar">
     <div class="logo">🛡️ LEADER PORTAL</div>
-
     <div>
-      <label>Current Leader:</label>
-      <select id="userSelector"></select>
+      <label>Logged in as:</label>
+      <select id="userSelector"><option value="">Loading...</option></select>
+      <button class="btn btn-profile" onclick="renderMyProfile()">👤 My Medical Info</button>
     </div>
-
-    <div>
-      <label>Manage Active Event:</label>
-      <select id="eventSelector" onchange="refreshDashboard()">
-        <option value="">Loading...</option>
+    <div style="border-top: 1px solid #334155; padding-top: 15px;">
+        <label>Navigation</label>
+        <button class="btn btn-nav" onclick="document.getElementById('eventSelector').value=''; renderUpcomingEvents()">📅 Upcoming Events (Edit)</button>
+        <button class="btn btn-nav" onclick="refreshDashboard()">🏠 Home Dashboard</button>
+    </div>
+    <div style="border-top: 1px solid #334155; padding-top: 15px;">
+        <label>Register User</label>
+        <input type="text" id="regName" placeholder="Full Name" style="margin-bottom:5px">
+        <input type="text" id="regEmail" placeholder="Email" style="margin-bottom:5px">
+        <select id="regRole" style="margin-bottom:5px">
+            <option value="Youth Pastor">Youth Pastor</option>
+            <option value="Leader">Leader</option>
+            <option value="Volunteer">Volunteer</option>
+            <option value="Parent">Parent</option>
+            <option value="Student">Student</option>
+        </select>
+        <button class="btn btn-create" onclick="createNewUser()">+ Create User</button>
+    </div>
+    <div style="border-top: 1px solid #334155; padding-top: 15px;">
+      <label>Quick Switch Event:</label>
+      <select id="eventSelector" onchange="refreshDashboard()"><option value="">Loading...</option></select>
+    </div>
+    <div style="border-top: 1px solid #334155; padding-top: 15px;">
+      <label>Event Factory</label>
+      <select id="factoryType" onchange="toggleFactoryFields()">
+        <option value="">Select Event Type...</option>
+        <option value="Small Group">Small Group</option>
+        <option value="Meeting">Meeting</option>
+        <option value="One-Time Event">One-Time Event</option>
       </select>
+      <div id="factoryFields" style="display:none; margin-top:10px;">
+        <input type="text" id="newEvName" placeholder="Event Name" style="margin-bottom:5px">
+        <input type="text" id="newEvLoc" placeholder="Location" style="margin-bottom:5px">
+        <input type="datetime-local" id="newEvTime" style="margin-bottom:5px">
+        <textarea id="newEvDesc" placeholder="Generic Description/Topic" style="margin-bottom:5px"></textarea>
+        <div id="dynamicFields">
+            <div id="sgFields" style="display:none; border-top: 1px solid #475569; padding-top: 10px; margin-top: 5px;">
+                <label style="color:#60a5fa;">Small Group Details</label>
+                <input type="text" id="sgTheme" placeholder="Theme (e.g., Book of Mark)" style="margin-bottom:5px">
+                <input type="text" id="sgDayOfWeek" placeholder="Day of Week (e.g., Monday)" style="margin-bottom:5px">
+                <input type="text" id="sgLeaderName" placeholder="Assigned Leader Name" style="margin-bottom:5px">
+            </div>
+            <div id="oteFields" style="display:none; border-top: 1px solid #475569; padding-top: 10px; margin-top: 5px;">
+                <label style="color:#60a5fa;">One-Time Event Details</label>
+                <input type="number" step="0.01" id="oteCost" placeholder="Cost (Cannot be negative)" style="margin-bottom:5px" min="0">
+                <label style="color:#94a3b8; font-size:0.7rem; margin-top:5px;">Is Registration Required?</label>
+                <select id="oteRegRequired" style="margin-bottom:5px">
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                </select>
+            </div>
+            <div id="mFields" style="display:none; border-top: 1px solid #475569; padding-top: 10px; margin-top: 5px;">
+                <label style="color:#60a5fa;">Meeting Details</label>
+                <input type="text" id="mMainTopic" placeholder="Main Topic" style="margin-bottom:5px">
+            </div>
+        </div>
+        <button class="btn btn-create" onclick="submitNewEvent()">+ Launch Event</button>
+      </div>
     </div>
-
-    <div style="border-top: 1px solid #334155; padding-top: 20px;">
-      <label>Create New Event</label>
-      <input type="text" id="newEventName" placeholder="Event Name...">
-      <button class="btn btn-create" onclick="createEventType()">+ Create Event</button>
+    <div style="border-top: 1px solid #334155; padding-top: 15px; margin-top:auto;">
+      <button class="btn btn-danger-toggle" onclick="toggleDangerZone()">⚠️ Dangerous Actions</button>
+      <div id="dangerZone" style="display:none; padding-top:10px;">
+          <label style="color: #f87171;">Delete User</label>
+          <select id="deleteUserSelector" style="margin-bottom:5px"><option value="">Select user...</option></select>
+          <button class="btn btn-delete" onclick="handleDeleteUser()">🗑️ Delete User</button>
+          <hr style="border:0; border-top:1px solid #475569; margin:15px 0 10px 0">
+          <button class="btn btn-end" onclick="endEvent()">🏁 End Active Event</button>
+      </div>
     </div>
-
-    <button class="btn btn-end" onclick="endEvent()">🏁 End Active Event</button>
   </aside>
 
   <main class="main">
     <div class="header">
       <div>
-        <h1 id="pageTitle">Dashboard</h1>
-        <div style="color: #64748b; margin-top: 5px;" id="pageSubtitle">Select an event</div>
+        <h1 id="pageTitle">Select an Event</h1>
+        <div id="pageSubtitle" style="color: #64748b; font-size: 0.9rem;">Management Dashboard</div>
       </div>
-      <div style="display:flex; gap:15px; align-items:center;">
-        <input type="text" id="searchBar" placeholder="🔍 Search Roster..." onkeyup="refreshDashboard()">
-        <div id="liveCountBadge" class="live-count" style="display:none;">
-          <span id="countValue">0</span> Present
-        </div>
-      </div>
+      <input type="text" id="searchBar" placeholder="🔍 Search People..." onkeyup="handleSearch()">
     </div>
-
     <div id="contentArea" class="grid"></div>
   </main>
 
+  <div id="editModal" class="modal">
+      <div class="modal-content">
+          <h2 style="color:#1f2937; margin-top:0;">Edit Event</h2>
+          <input type="hidden" id="editEventId">
+          <label>Event Name</label><input type="text" id="editName" style="margin-bottom:10px">
+          <label>Location</label><input type="text" id="editLoc" style="margin-bottom:10px">
+          <label>Time</label><input type="text" id="editTime" style="margin-bottom:10px">
+          <label>Description</label><textarea id="editDesc" rows="3" style="margin-bottom:10px"></textarea>
+          <div style="display:flex; gap:10px; margin-top:15px;">
+              <button class="btn btn-info" onclick="closeModal()">Cancel</button>
+              <button class="btn btn-create" onclick="saveEventChanges()">Save Changes</button>
+          </div>
+      </div>
+  </div>
+
   <script>
     const API_URL = "/graphql";
-    let allEventsCache = [];
 
     async function sendGQL(query) {
-      const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) });
-      return (await res.json()).data;
+      try {
+          const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) });
+          const json = await res.json();
+          if (json.errors) {
+              console.error("GraphQL Errors:", json.errors);
+              alert("Error: " + json.errors[0].message);
+              return null;
+          }
+          return json.data;
+      } catch (e) {
+          console.error("Network/API Error", e);
+          return null;
+      }
     }
 
-    async function init() {
-      // 1. Load Leaders Only
-      const userData = await sendGQL(`query { people { id name role } }`);
-      const userSel = document.getElementById('userSelector');
-      userData.people.forEach(u => {
-        if (u.role === 'Leader' || u.role.includes('Pastor')) {
-           userSel.innerHTML += `<option value="${u.id}">${u.name}</option>`;
-        }
-      });
+    // PHONE FORMATTER
+    function formatPhoneInput(event) {
+        const input = event.target;
+        let value = input.value.replace(/\D/g, '');
+        if (value.length > 10) value = value.substring(0, 10);
+        if (value.length > 6) input.value = `(${value.substring(0, 3)}) ${value.substring(3, 6)}-${value.substring(6)}`;
+        else if (value.length > 3) input.value = `(${value.substring(0, 3)}) ${value.substring(3)}`;
+        else if (value.length > 0) input.value = `(${value}`;
+        else input.value = '';
+    }
 
-      // 2. Load Events
+    function toggleFactoryFields() {
+        const type = document.getElementById('factoryType').value;
+        const fields = document.getElementById('factoryFields');
+        const sg = document.getElementById('sgFields'), ote = document.getElementById('oteFields'), m = document.getElementById('mFields');
+        fields.style.display = type ? 'block' : 'none';
+        sg.style.display = 'none'; ote.style.display = 'none'; m.style.display = 'none';
+        if (type === 'Small Group') sg.style.display = 'block';
+        else if (type === 'One-Time Event') ote.style.display = 'block';
+        else if (type === 'Meeting') m.style.display = 'block';
+    }
+
+    function toggleDangerZone() { document.getElementById('dangerZone').style.display = document.getElementById('dangerZone').style.display === 'none' ? 'block' : 'none'; }
+    function closeModal() { document.getElementById('editModal').style.display = 'none'; }
+    function openEditModal(e) {
+        document.getElementById('editEventId').value = e.id;
+        document.getElementById('editName').value = e.name;
+        document.getElementById('editLoc').value = e.location || '';
+        document.getElementById('editTime').value = e.time || '';
+        let desc = e.description || '';
+        try { desc = JSON.parse(e.description).generic || e.description; } catch(err){}
+        document.getElementById('editDesc').value = desc;
+        document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function handleSearch() {
+        const eventId = document.getElementById('eventSelector').value;
+        if(eventId) refreshDashboard(); else renderUpcomingEvents();
+    }
+
+    setInterval(() => { if (document.getElementById('eventSelector').value && document.getElementById('contentArea').className === "grid") refreshDashboard(); }, 5000);
+
+    async function init() {
+      // Load People
+      const data = await sendGQL(`query { people { id name role } }`);
+      const userSel = document.getElementById('userSelector');
+      const delSel = document.getElementById('deleteUserSelector');
+
+      if (data && data.people) {
+          const sorted = [...data.people].sort((a, b) => a.name.localeCompare(b.name));
+
+          userSel.innerHTML = "<option value=''>Select Leader Name...</option>";
+          delSel.innerHTML = "<option value=''>Select user...</option>";
+
+          data.people.forEach(u => {
+              if (u.role.includes('Leader') || u.role.includes('Pastor') || u.role.includes('Admin')) {
+                  userSel.innerHTML += `<option value="${u.id}">${u.name}</option>`;
+              }
+          });
+
+          sorted.forEach(u => {
+              delSel.innerHTML += `<option value="${u.id}">${u.name} (${u.role})</option>`;
+          });
+      } else {
+          userSel.innerHTML = "<option>Error loading users</option>";
+      }
+
       await loadEvents();
     }
 
     async function loadEvents() {
-      const data = await sendGQL(`query { getAllEvents { id name status } }`);
+      const data = await sendGQL(`query { getAllEvents { id name status type } }`);
       const sel = document.getElementById('eventSelector');
-      sel.innerHTML = "";
-      allEventsCache = [];
+      sel.innerHTML = "<option value=''>Select an Event...</option>";
 
-      if(data && data.getAllEvents.length > 0) {
-        data.getAllEvents.forEach(e => {
-            if (e.status === 'Active' || !e.status) {
-                allEventsCache.push(e);
-                sel.innerHTML += `<option value="${e.id}">${e.name}</option>`;
+      let activeFound = false;
+      if (data && data.getAllEvents) {
+          data.getAllEvents.forEach(e => {
+            if(e.status === 'Active') {
+                sel.innerHTML += `<option value="${e.id}" data-type="${e.type}">${e.name}</option>`;
+                activeFound = true;
             }
-        });
-        if(allEventsCache.length > 0) refreshDashboard();
-        else sel.innerHTML = "<option value=''>No Active Events</option>";
-      } else {
-        sel.innerHTML = "<option value=''>No Active Events</option>";
+          });
       }
+
+      if (activeFound) refreshDashboard(); else renderUpcomingEvents();
+    }
+
+    function formatEventDetails(description, type) {
+        let parsedDesc = { generic: description || '', specialized: {} };
+        try { const parsed = JSON.parse(description); if (parsed && typeof parsed === 'object') parsedDesc = parsed; } catch (err) { parsedDesc.generic = description; }
+        let detailString = '';
+        const spec = parsedDesc.specialized;
+        if (type === 'Small Group') {
+            if(spec.LeaderName) detailString += ` | 🛡️ Leader: ${spec.LeaderName}`;
+            if(spec.Theme) detailString += ` | 📚 Theme: ${spec.Theme}`;
+            if(spec.DayOfWeek) detailString += ` | 🗓️ ${spec.DayOfWeek}`;
+        } else if (type === 'One-Time Event') {
+            if(spec.Cost) detailString += ` | 💸 Cost: $${parseFloat(spec.Cost).toFixed(2)}`;
+            if(spec.RegistrationRequired !== undefined) detailString += ` | ✍️ Reg Required: ${spec.RegistrationRequired ? 'Yes' : 'No'}`;
+        } else if (type === 'Meeting' && spec.MainTopic) detailString += ` | 🗣️ Topic: ${spec.MainTopic}`;
+        return { generic: parsedDesc.generic, details: detailString };
+    }
+
+    async function renderUpcomingEvents() {
+        document.getElementById('pageTitle').innerText = "Upcoming Events";
+        document.getElementById('pageSubtitle').innerText = "All active event types.";
+        document.getElementById('searchBar').style.display = 'block';
+        document.getElementById('searchBar').placeholder = "🔍 Search Events...";
+        const term = document.getElementById('searchBar').value.toLowerCase();
+
+        const data = await sendGQL(`query { getAllEvents { id name status type location time description } }`);
+        const container = document.getElementById('contentArea');
+        container.className = "";
+        container.innerHTML = "";
+
+        if (data && data.getAllEvents) {
+            data.getAllEvents.forEach(e => {
+                if(e.status === 'Active') {
+                    const formatted = formatEventDetails(e.description, e.type);
+                    if(term && !e.name.toLowerCase().includes(term) && !e.location.toLowerCase().includes(term) && !formatted.generic.toLowerCase().includes(term)) return;
+                    const safeObj = JSON.stringify(e).replace(/'/g, "&#39;");
+                    container.innerHTML += `
+                        <div class="event-item" style="flex-direction:column; align-items:flex-start;">
+                            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                                <strong>${e.name} <span style="font-size:0.8rem; color:var(--primary)">(${e.type || 'General'})</span></strong>
+                                <div style="display:flex; gap:10px;">
+                                    <button class="btn btn-info" style="width:auto; padding:8px 15px; margin:0;" onclick='openEditModal(${safeObj})'>✏️ Edit</button>
+                                    <button class="btn btn-create" style="width:auto; padding:8px 20px; margin:0;" onclick="document.getElementById('eventSelector').value=${e.id}; refreshDashboard();">Manage</button>
+                                </div>
+                            </div>
+                            <div style="margin-top:10px; font-size:0.9rem; color:#64748b;">
+                                <strong>📍 Location:</strong> ${e.location || 'TBD'} | <strong>🕒 Time:</strong> ${e.time || 'TBD'}
+                                ${formatted.details}
+                            </div>
+                            <p style="margin:5px 0 0 0; font-size:0.8rem;">${formatted.generic}</p>
+                        </div>`;
+                }
+            });
+        }
+        if (container.innerHTML === "") container.innerHTML = "<p>No upcoming events found.</p>";
     }
 
     async function refreshDashboard() {
-      const eventId = document.getElementById('eventSelector').value;
-      if(!eventId) {
-        document.getElementById('contentArea').innerHTML = "<p>No active events found.</p>";
-        document.getElementById('liveCountBadge').style.display = 'none';
-        return;
-      }
+        const eventId = document.getElementById('eventSelector').value;
+        if(!eventId) return renderUpcomingEvents();
 
-      const eventName = document.getElementById('eventSelector').selectedOptions[0].text;
-      document.getElementById('pageTitle').innerText = eventName;
-      document.getElementById('contentArea').className = "grid";
+        const selectedOption = document.getElementById('eventSelector').selectedOptions[0];
+        const eventName = selectedOption.text;
+        const eventType = selectedOption.getAttribute('data-type');
 
-      const data = await sendGQL(`
-        query {
-          people { id name role }
-          eventLiveRoster(eventId: ${eventId})
-          getRsvpList(eventId: ${eventId})
-          getActiveCount(eventId: ${eventId})
-        }
-      `);
+        document.getElementById('pageTitle').innerText = eventName;
+        document.getElementById('pageSubtitle').innerText = "Manage Attendance";
+        document.getElementById('contentArea').className = "grid";
+        document.getElementById('searchBar').style.display = 'block';
+        document.getElementById('searchBar').placeholder = "🔍 Search People...";
 
-      document.getElementById('liveCountBadge').style.display = 'flex';
-      document.getElementById('countValue').innerText = data.getActiveCount;
+        const data = await sendGQL(`query { people { id name role } eventLiveRoster(eventId: ${eventId}) getRsvpList(eventId: ${eventId}) }`);
 
-      let roster = data.people.map(p => ({
-        ...p,
-        isCheckedIn: data.eventLiveRoster.includes(p.id),
-        isRsvp: data.getRsvpList.includes(p.id)
-      }));
+        const roleOrder = { "Youth Pastor": 1, "Leader": 2, "Parent": 3, "ParentGuardian": 3, "Volunteer": 4, "Student": 5, "Youth": 5 };
+        const RSVP_ROLES = ["Student", "Volunteer", "Parent", "Youth", "ParentGuardian"];
 
-      // --- NEW SORTING LOGIC ---
-      // Map roles to numeric priority
-      const roleOrder = {
-          "Youth Pastor": 1,
-          "Leader": 2,
-          "Parent": 3,
-          "Volunteer": 4,
-          "Student": 5
-      };
-
-      roster.sort((a, b) => {
-          // 1. Primary Sort: Status (Checked In > RSVP > Absent)
-          if (a.isCheckedIn !== b.isCheckedIn) return a.isCheckedIn ? -1 : 1;
-          if (a.isRsvp !== b.isRsvp) return a.isRsvp ? -1 : 1;
-
-          // 2. Secondary Sort: Role (Pastor > Leader > Parent > Volunteer > Student)
-          // Default to 99 if role is unknown so they go to bottom
-          const roleA = roleOrder[a.role] || 99;
-          const roleB = roleOrder[b.role] || 99;
-          return roleA - roleB;
-      });
-
-      const term = document.getElementById('searchBar').value.toLowerCase();
-      if(term) roster = roster.filter(p => p.name.toLowerCase().includes(term));
-
-      const container = document.getElementById('contentArea');
-      container.innerHTML = "";
-
-      roster.forEach(p => {
-        let cls = "absent", icon = "❌ No RSVP", btn = "Scan In", fn = "checkIn";
-        const isLeader = (p.role === 'Leader' || p.role.includes('Pastor'));
-
-        // 1. Determine Basic State
-        if (p.isCheckedIn) {
-            cls = "checked-in";
-            icon = "✅ Present";
-            btn = "Scan Out";
-            fn = "checkOut";
-        } else if (p.isRsvp) {
-            cls = "rsvp-only";
-            icon = "✅ RSVP'd";
-            btn = "Scan In";
-            fn = "checkIn";
+        // --- MEETING FILTER ---
+        let filteredPeople = [];
+        if (data && data.people) {
+            filteredPeople = data.people;
+            if (eventType === 'Meeting') {
+                filteredPeople = data.people.filter(p => ["Youth Pastor", "Leader", "Admin", "Security", "Pastor"].includes(p.role));
+            }
         }
 
-        // 2. OVERRIDE FOR LEADERS
-        if (isLeader) {
-             if (!p.isCheckedIn) {
-                 cls = "leader-neutral";
-                 icon = "🛡️ Leader";
-             }
-        }
+        let roster = filteredPeople.map(p => ({ ...p, isIn: data.eventLiveRoster.includes(p.id), isRsvp: data.getRsvpList.includes(p.id) }));
 
-        container.innerHTML += `
-          <div class="card ${cls}">
-            <div style="display:flex; justify-content:space-between;">
-                <strong>${p.name}</strong> <span>${icon}</span>
-            </div>
-            <small style="color:#64748b;">${p.role}</small>
-            <div style="margin-top:15px;">
-                <button class="btn btn-action" onclick="${fn}(${p.id})">${btn}</button>
-                <button class="btn btn-info" onclick="viewProfile(${p.id}, '${p.name}')">📄 View Info</button>
-            </div>
-          </div>
-        `;
-      });
+        roster.sort((a,b) => {
+            if (a.isIn !== b.isIn) return a.isIn ? -1 : 1;
+            if (a.isRsvp !== b.isRsvp) return a.isRsvp ? -1 : 1;
+            const orderA = roleOrder[a.role] || 99;
+            const orderB = roleOrder[b.role] || 99;
+            return orderA - orderB;
+        });
+
+        const term = document.getElementById('searchBar').value.toLowerCase();
+        const container = document.getElementById('contentArea');
+        container.innerHTML = "";
+
+        roster.filter(p => p.name.toLowerCase().includes(term)).forEach(p => {
+            let cls = '', icon = '';
+            if (p.isIn) { cls = "checked-in"; icon = "✅ Present"; }
+            else if (RSVP_ROLES.includes(p.role)) {
+                if (p.isRsvp) { cls = "rsvp-only"; icon = "✅ RSVP'd"; }
+                else { cls = "absent"; icon = "❌ Absent"; }
+            } else { cls = "leader-neutral"; icon = p.role.includes('Pastor') ? "👑 Pastor" : "🛡️ Leader"; }
+            const styleAttr = `background:${p.isIn ? '#cbd5e1' : 'var(--primary)'}; color:${p.isIn ? '#475569' : 'white'}`;
+            container.innerHTML += `
+            <div class="card ${cls}">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong>${p.name}</strong><span style="font-size:0.7rem; font-weight:800">${icon}</span>
+                </div>
+                <small style="color:#64748b; margin-bottom:10px">${p.role}</small>
+                <div style="margin-top:auto">
+                    <button class="btn btn-info" onclick="viewProfile(${p.id}, '${p.name}')">📄 Medical Info</button>
+                    <button class="btn" style="${styleAttr}" onclick="${p.isIn?'checkOut':'checkIn'}(${p.id})">${p.isIn?'Scan Out':'Scan In'}</button>
+                </div>
+            </div>`;
+        });
+    }
+
+    async function submitNewEvent() {
+        const name = document.getElementById('newEvName').value, type = document.getElementById('factoryType').value, loc = document.getElementById('newEvLoc').value, time = document.getElementById('newEvTime').value, desc = document.getElementById('newEvDesc').value;
+        if(!name || !type) return alert("Fill Name/Type");
+
+        let specializedData = {};
+        if (type === 'Small Group') specializedData = { LeaderName: document.getElementById('sgLeaderName').value, Theme: document.getElementById('sgTheme').value, DayOfWeek: document.getElementById('sgDayOfWeek').value };
+        else if (type === 'One-Time Event') {
+            const costVal = document.getElementById('oteCost').value;
+            if (parseFloat(costVal) < 0) return alert("Cost cannot be negative.");
+            specializedData = { Cost: costVal, RegistrationRequired: document.getElementById('oteRegRequired').value === 'true' };
+        }
+        else if (type === 'Meeting') specializedData = { MainTopic: document.getElementById('mMainTopic').value };
+
+        const combinedDescription = JSON.stringify({ generic: desc, specialized: specializedData }).replace(/"/g, '\\"');
+        await sendGQL(`mutation { createEventType( name: "${name}", eventType: "${type}", location: "${loc}", time: "${time}", description: "${combinedDescription}" ) }`);
+        alert("Event Created!"); location.reload();
+    }
+
+    async function saveEventChanges() {
+        const id = document.getElementById('editEventId').value, name = document.getElementById('editName').value, loc = document.getElementById('editLoc').value, time = document.getElementById('editTime').value, desc = document.getElementById('editDesc').value;
+        const res = await sendGQL(`mutation { updateEventDetails(eventId: ${id}, name: "${name}", location: "${loc}", time: "${time}", genericDescription: "${desc}") }`);
+        if(res) { alert(res.updateEventDetails); closeModal(); renderUpcomingEvents(); }
+    }
+
+    async function handleDeleteUser() {
+        const id = document.getElementById('deleteUserSelector').value;
+        if(!id) return alert("Select user first.");
+        if(confirm(`Delete this user permanently?`)) {
+            const res = await sendGQL(`mutation { deletePerson(personId: ${id}) }`);
+            if(res) { alert(res.deletePerson); location.reload(); }
+        }
     }
 
     async function viewProfile(id, name) {
+        document.getElementById('searchBar').style.display = 'none';
         const data = await sendGQL(`query { getStudentProfile(studentId: ${id}) }`);
+        if(!data) return;
         const p = JSON.parse(data.getStudentProfile || "{}");
-
+        document.getElementById('pageTitle').innerText = "Medical Information";
         document.getElementById('contentArea').className = "";
         document.getElementById('contentArea').innerHTML = `
-            <div class="profile-view">
-                <h2>Info: ${name}</h2>
-                <div class="ro-label">Allergies</div><div class="ro-val">${p.allergies || 'None'}</div>
-                <div class="ro-label">Meds</div><div class="ro-val">${p.medical || 'None'}</div>
-                <div class="ro-label">Emergency Contact</div><div class="ro-val">${p.contactName || '--'}</div>
-                <div class="ro-label">Phone</div><div class="ro-val" style="color:#4f46e5;font-weight:bold;">${p.contactPhone || '--'}</div>
-                <button class="btn btn-action" onclick="refreshDashboard()">⬅ Back</button>
-            </div>
-        `;
+            <div style="background:white; padding:30px; border-radius:12px; max-width:600px; margin:0 auto">
+                <h2>Medical: ${name}</h2>
+                <p><strong>Allergies:</strong> ${p.allergies||'None'}</p>
+                <p><strong>Conditions:</strong> ${p.medical||'None'}</p>
+                <p><strong>Emergency Contact:</strong> ${p.contactName||'--'}</p>
+                <p><strong>Phone:</strong> ${p.contactPhone||'--'}</p>
+                <button class="btn btn-create" onclick="refreshDashboard()">⬅ Back</button>
+            </div>`;
+    }
+
+    async function renderMyProfile() {
+        document.getElementById('searchBar').style.display = 'none';
+        const id = document.getElementById('userSelector').value;
+        if (!id) return alert("Please select your name (Logged in as) first.");
+        const data = await sendGQL(`query { getStudentProfile(studentId: ${id}) }`);
+        if(!data) return;
+        const p = JSON.parse(data.getStudentProfile || "{}");
+        document.getElementById('contentArea').className = "";
+        document.getElementById('contentArea').innerHTML = `
+            <div style="background:white; padding:30px; border-radius:12px; max-width:600px; margin:0 auto">
+                <h2 style="color:black">My Medical Profile</h2>
+                <label style="color:black">Allergies</label><input id="myAll" value="${p.allergies||''}" style="background:#f1f5f9; color:black; margin-bottom:15px">
+                <label style="color:black">Conditions</label><textarea id="myMed" style="background:#f1f5f9; color:black; margin-bottom:15px" rows="3">${p.medical||''}</textarea>
+                <label style="color:black">Emergency Contact Name</label><input id="myContactName" value="${p.contactName||''}" style="background:#f1f5f9; color:black; margin-bottom:15px">
+                <label style="color:black">Emergency Phone</label>
+                <input id="myContactPhone" value="${p.contactPhone||''}" placeholder="(555) 123-4567" maxlength="14" oninput="formatPhoneInput(event)" style="background:#f1f5f9; color:black; margin-bottom:15px">
+                <button class="btn btn-create" style="background:var(--success)" onclick="saveMyProfile(${id})">💾 Save Profile</button>
+                <button class="btn" onclick="refreshDashboard()">Cancel</button>
+            </div>`;
+    }
+
+    async function saveMyProfile(id) {
+        const json = JSON.stringify({
+            allergies: document.getElementById('myAll').value,
+            medical: document.getElementById('myMed').value,
+            contactName: document.getElementById('myContactName').value,
+            contactPhone: document.getElementById('myContactPhone').value
+        }).replace(/"/g, '\\"');
+        const res = await sendGQL(`mutation { updateStudentProfile(studentId: ${id}, dataJson: "${json}") }`);
+        if(res) { alert("Saved!"); refreshDashboard(); }
+    }
+
+    async function createNewUser() {
+        const n = document.getElementById('regName').value, e = document.getElementById('regEmail').value, r = document.getElementById('regRole').value;
+        if(!n || !e) return alert("Fill Name/Email");
+        const res = await sendGQL(`mutation { createPerson(name: "${n}", email: "${e}", role: "${r}") }`);
+        if(res) { alert("User Registered!"); location.reload(); }
     }
 
     async function checkIn(id) {
-      await sendGQL(`mutation { checkInStudent(eventId: ${document.getElementById('eventSelector').value}, studentId: ${id}) }`);
-      refreshDashboard();
+        const res = await sendGQL(`mutation { checkInStudent(eventId: ${document.getElementById('eventSelector').value}, studentId: ${id}) }`);
+        if(res && res.checkInStudent.includes("Error")) alert(res.checkInStudent);
+        refreshDashboard();
     }
-    async function checkOut(id) {
-      await sendGQL(`mutation { checkOutStudent(eventId: ${document.getElementById('eventSelector').value}, studentId: ${id}) }`);
-      refreshDashboard();
-    }
-    async function createEventType() {
-        const name = document.getElementById('newEventName').value;
-        if(!name) return;
-        const schema = JSON.stringify({ "fields": ["snack"], "required": [] }).replace(/"/g, '\\"');
-        await sendGQL(`mutation { createEventType(name: "${name}", schemaJson: "${schema}") }`);
-        alert("Event Created");
-        await loadEvents();
-    }
+    async function checkOut(id) { await sendGQL(`mutation { checkOutStudent(eventId: ${document.getElementById('eventSelector').value}, studentId: ${id}) }`); refreshDashboard(); }
     async function endEvent() {
-      const eid = document.getElementById('eventSelector').value;
-      if(!eid) return;
-      if(!confirm("End this event? Will save to MySQL and archive.")) return;
-      await sendGQL(`mutation { endEvent(eventId: ${eid}) }`);
-      alert("Event Ended");
-      await loadEvents();
+        const eventId = document.getElementById('eventSelector').value;
+        if(!eventId) return alert("Select event first.");
+        if(confirm("End this event?")) { await sendGQL(`mutation { endEvent(eventId: ${eventId}) }`); location.reload(); }
     }
 
     init();

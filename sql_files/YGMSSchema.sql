@@ -1,4 +1,4 @@
--- YGMSData.sql
+-- YGMSSchema.sql
 -- STRICT ORDER RESET
 -- Deletes tables from "Leaf" to "Root" to satisfy all constraints.
 create database if not exists ygms_db;
@@ -47,8 +47,24 @@ CREATE TABLE Person (
     Role VARCHAR(50) DEFAULT 'Student'
 );
 
-CREATE TABLE EventType ( ID INT AUTO_INCREMENT PRIMARY KEY, Name VARCHAR(100) UNIQUE, Status VARCHAR(50) DEFAULT 'Active' );
-CREATE TABLE Attendance ( ID INT AUTO_INCREMENT PRIMARY KEY, EventID INT, StudentID INT, Status VARCHAR(50) );
+-- THIS IS THE TABLE THAT REQUIRES THE NEW COLUMNS (Type, Location, Time, Description)
+CREATE TABLE EventType (
+    ID INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(100) UNIQUE,
+    Status VARCHAR(50) DEFAULT 'Active',
+    Type VARCHAR(50),
+    Location VARCHAR(255),
+    Time DATETIME,
+    Description VARCHAR(255)
+);
+
+CREATE TABLE Attendance (
+    ID INT AUTO_INCREMENT PRIMARY KEY,
+    EventID INT,
+    StudentID INT,
+    Status VARCHAR(50)
+);
+
 CREATE TABLE YouthPastor ( PersonID INT PRIMARY KEY, HireDate DATE, FOREIGN KEY (PersonID) REFERENCES Person(ID) );
 CREATE TABLE Leader ( PersonID INT PRIMARY KEY, FOREIGN KEY (PersonID) REFERENCES Person(ID) );
 CREATE TABLE Volunteer ( PersonID INT PRIMARY KEY, Specialty VARCHAR(100), FOREIGN KEY (PersonID) REFERENCES Person(ID) );
