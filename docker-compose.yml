@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Service 1: The MySQL Database
   db:
@@ -20,6 +18,11 @@ services:
       # Prefix with numbers to ensure schema runs before data.
       - ./sql_files/YGMSSchema.sql:/docker-entrypoint-initdb.d/01_schema.sql
       - ./sql_files/YGMSData.sql:/docker-entrypoint-initdb.d/02_data.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   mongo:
     image: mongo:latest
     container_name: ygms-mongo
@@ -36,7 +39,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       # OVERRIDE the localhost setting for Docker networking
       MYSQL_HOST: db
@@ -44,13 +48,21 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MONGO_URL: mongodb://mongo:27017/ygms_mongo_db
+      MONGO_HOST: mongo
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
 
   redis:
     image: redis:alpine
     container_name: ygms-redis
     ports:
         - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   db_data:

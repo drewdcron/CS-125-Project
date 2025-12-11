@@ -69,6 +69,34 @@ class AttendanceORM(Base):
     Status = Column(String(50))
 
 
+class PermissionWaiverORM(Base):
+    __tablename__ = "PermissionWaiver"
+    ID = Column(Integer, primary_key=True, autoincrement=True)
+    YouthID = Column(Integer)
+    PersonID = Column(Integer)
+    DocumentType = Column(String(100))
+    DateSigned = Column(String(50))
+    DateExpires = Column(String(50))
+    Status = Column(String(50))
+
+
+class PermissionWaiverEventORM(Base):
+    __tablename__ = "PermissionWaiverEvent"
+    EventID = Column(Integer, primary_key=True)
+    PermissionWaiverID = Column(Integer, primary_key=True)
+    IsRequired = Column(Integer)
+
+
+class EventORM(Base):
+    __tablename__ = "Event"
+    ID = Column(Integer, primary_key=True, autoincrement=True)
+    EventTypeID = Column(Integer)
+    Date = Column(String(50))
+    Time = Column(String(50))
+    Location = Column(String(255))
+    MaxCapacity = Column(Integer)
+
+
 # Create tables if missing
 Base.metadata.create_all(bind=engine)
 
@@ -118,6 +146,34 @@ class CustomDataType:
     student_id: int
     event_id: int
     data_json: str
+
+
+@strawberry.type
+class Waiver:
+    id: int
+    youth_id: int
+    person_id: int
+    document_type: str
+    date_signed: str
+    date_expires: str
+    status: str
+
+
+@strawberry.type
+class WaiverEvent:
+    event_id: int
+    permission_waiver_id: int
+    is_required: bool
+
+
+@strawberry.type
+class Event:
+    id: int
+    event_type_id: int
+    date: str
+    time: str
+    location: str
+    max_capacity: int
 
 
 # --- 4. QUERY RESOLVERS (READ) ---
@@ -203,6 +259,16 @@ class Query:
             return json.dumps(doc.get("data", {}))
         return "{}"
 
+    @strawberry.field
+    def get_required_waivers(self, event_id: int) -> List[WaiverEvent]:
+        db = SessionLocal()
+        try:
+            waivers = db.query(PermissionWaiverEventORM).filter_by(EventID=event_id, IsRequired=1).all()
+            return [WaiverEvent(event_id=w.EventID, permission_waiver_id=w.PermissionWaiverID, is_required=w.IsRequired)
+                    for w in waivers]
+        finally:
+            db.close()
+
 
 # --- 5. MUTATIONS (WRITE) ---
 @strawberry.type
@@ -270,6 +336,54 @@ class Mutation:
         except Exception as e:
             return f"Error: {e}"
 
+    @strawberry.mutation
+    def conditional_check_in(self, event_id: int, student_id: int) -> str:
+        # 1. MySQL: Validation
+        # We open a session just long enough to check existence/status
+        db = SessionLocal()
+        try:
+            event = db.query(EventORM).filter_by(ID=event_id).first()
+            if not event:
+                return "Failed: Event does not exist."
+
+            event_type = db.query(EventTypeORM).filter_by(ID=event.EventTypeID).first()
+            if not event_type or event_type.Status != "Active":
+                return "Failed: Event is not active."
+
+            # Check for required waivers
+            required_waivers = db.query(PermissionWaiverEventORM).filter_by(EventID=event_id, IsRequired=1).all()
+            if required_waivers:
+                for req_waiver in required_waivers:
+                    waiver = db.query(PermissionWaiverORM).filter_by(
+                        ID=req_waiver.PermissionWaiverID,
+                        YouthID=student_id,
+                        Status="Active"
+                    ).first()
+                    if not waiver:
+                        return f"Failed: Required waiver not signed."
+
+        finally:
+            db.close()
+
+        # 2. MongoDB: Prerequisite Check
+        # Check if they submitted the required custom data form
+        submission = event_custom_data_collection.find_one({
+            "eventId": event_id,
+            "studentId": student_id
+        })
+
+        if not submission:
+            return "Failed: Required form/waiver not submitted."
+
+        # 3. Redis: Execution
+        if not redis_client: return "Redis Error"
+
+        # If we made it here, they are cleared for entry
+        redis_client.sadd(f"event:{event_id}:checkedIn", student_id)
+        redis_client.hset(f"event:{event_id}:checkInTimes", str(student_id), datetime.now().isoformat())
+
+        return "Success: Checked In"
+
     # --- Live Check-In Logic (Redis) ---
 
     @strawberry.mutation
@@ -315,6 +429,79 @@ class Mutation:
             return "Profile Updated Successfully"
         except Exception as e:
             return f"Error: {e}"
+
+    @strawberry.mutation
+    def sign_waiver(self, youth_id: int, person_id: int, document_type: str, date_signed: str, date_expires: str,
+                    status: str) -> Waiver:
+        db = SessionLocal()
+        try:
+            new_waiver = PermissionWaiverORM(
+                YouthID=youth_id,
+                PersonID=person_id,
+                DocumentType=document_type,
+                DateSigned=date_signed,
+                DateExpires=date_expires,
+                Status=status
+            )
+            db.add(new_waiver)
+            db.commit()
+            db.refresh(new_waiver)
+            return Waiver(
+                id=new_waiver.ID,
+                youth_id=new_waiver.YouthID,
+                person_id=new_waiver.PersonID,
+                document_type=new_waiver.DocumentType,
+                date_signed=new_waiver.DateSigned,
+                date_expires=new_waiver.DateExpires,
+                status=new_waiver.Status
+            )
+        finally:
+            db.close()
+
+    @strawberry.mutation
+    def create_permission_waiver_event(self, event_id: int, permission_waiver_id: int, is_required: bool) -> WaiverEvent:
+        db = SessionLocal()
+        try:
+            new_waiver_event = PermissionWaiverEventORM(
+                EventID=event_id,
+                PermissionWaiverID=permission_waiver_id,
+                IsRequired=1 if is_required else 0
+            )
+            db.add(new_waiver_event)
+            db.commit()
+            # The ORM does not refresh automatically on composite primary keys
+            return WaiverEvent(
+                event_id=new_waiver_event.EventID,
+                permission_waiver_id=new_waiver_event.PermissionWaiverID,
+                is_required=new_waiver_event.IsRequired
+            )
+        finally:
+            db.close()
+
+    @strawberry.mutation
+    def create_event(self, event_type_id: int, date: str, time: str, location: str, max_capacity: int) -> 'Event':
+        db = SessionLocal()
+        try:
+            new_event = EventORM(
+                EventTypeID=event_type_id,
+                Date=date,
+                Time=time,
+                Location=location,
+                MaxCapacity=max_capacity
+            )
+            db.add(new_event)
+            db.commit()
+            db.refresh(new_event)
+            return Event(
+                id=new_event.ID,
+                event_type_id=new_event.EventTypeID,
+                date=new_event.Date,
+                time=new_event.Time,
+                location=new_event.Location,
+                max_capacity=new_event.MaxCapacity
+            )
+        finally:
+            db.close()
 
     # --- End Event Logic (Redis -> MySQL) ---
 
