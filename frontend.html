@@ -6,7 +6,7 @@
   <title>YGMS Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    :root { --primary: #4f46e5; --bg: #f3f4f6; --text: #1f2937; --success: #10b981; --danger: #ef4444; }
+    :root { --primary: #4f46e5; --bg: #f3f4f6; --text: #1f2937; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; --info: #0ea5e9; }
     body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
 
     /* Sidebar */
@@ -14,41 +14,81 @@
     .logo { font-size: 1.8rem; font-weight: 800; color: #60a5fa; letter-spacing: -1px; }
 
     label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 5px; display: block; }
-    select, input { width: 100%; padding: 12px; border-radius: 8px; background: #334155; color: white; border: 1px solid #475569; outline: none; box-sizing: border-box; }
-    select:focus, input:focus { border-color: #60a5fa; }
+    select, input, textarea { width: 100%; padding: 12px; border-radius: 8px; background: #334155; color: white; border: 1px solid #475569; outline: none; box-sizing: border-box; font-family: inherit; }
+    select:focus, input:focus, textarea:focus { border-color: #60a5fa; }
 
     /* Main Area */
     .main { flex-grow: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; }
 
     .header { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
     .header h1 { margin: 0; font-size: 1.5rem; }
-    .badge { background: #eff6ff; color: var(--primary); padding: 5px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; }
+    .header-controls { display: flex; gap: 15px; align-items: center; }
 
-    /* Live Count Badge (Redis) */
+    /* Search Bar */
+    #searchBar { background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 10px 15px; width: 250px; }
+
+    /* Live Count Badge */
     .live-count { background: var(--success); color: white; padding: 8px 16px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
     .dot { width: 10px; height: 10px; background: white; border-radius: 50%; animation: pulse 1.5s infinite; }
 
-    /* Grid */
+    /* Grid Layout */
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
 
-    /* Cards */
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 5px solid transparent; transition: transform 0.2s; }
+    /* Roster Cards */
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 8px solid transparent; transition: transform 0.2s; position: relative; display: flex; flex-direction: column; }
     .card:hover { transform: translateY(-2px); }
-    .card.present { border-left-color: var(--success); background: #f0fdf4; }
-    .card.absent { border-left-color: #cbd5e1; }
+
+    /* --- STATUS COLORS --- */
+    .card.checked-in { border-left-color: var(--success); background: #dcfce7; }
+    .card.rsvp-only { border-left-color: var(--warning); background: #fffbeb; }
+    .card.absent { border-left-color: var(--danger); background: #fee2e2; }
+    .card.leader-view { border-left-color: #64748b; background: #f1f5f9; } /* Default style for leaders */
+
+    /* RSVP Icon Badge */
+    .rsvp-badge { font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; }
+    .rsvp-yes { color: var(--success); }
+    .rsvp-no { color: var(--danger); opacity: 0.6; }
+
+    /* Event List Item (Student View) */
+    .event-list-item {
+      background: white; padding: 25px; border-radius: 12px; margin-bottom: 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 5px solid var(--primary);
+    }
+    .event-info h3 { margin: 0 0 5px 0; font-size: 1.2rem; }
+    .event-info span { color: #64748b; font-size: 0.9rem; }
+
+    /* Profile Form (Student View) */
+    .profile-form { background: white; padding: 30px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { color: #475569; font-size: 0.85rem; margin-bottom: 8px; }
+    .form-group input, .form-group textarea { background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; }
+
+    /* Read Only Profile View (Leader) */
+    .profile-view-readonly { background: white; padding: 30px; border-radius: 12px; max-width: 600px; margin: 0 auto; }
+    .readonly-field { margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+    .readonly-label { color: #64748b; font-size: 0.8rem; text-transform: uppercase; font-weight: bold; }
+    .readonly-value { font-size: 1.1rem; color: #1e293b; margin-top: 5px; }
 
     /* Buttons */
-    .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 10px; transition: opacity 0.2s; }
-    .btn:hover { opacity: 0.9; }
+    .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 10px; }
     .btn-action { background: #e2e8f0; color: #475569; }
-    .card.present .btn-action { background: #dcfce7; color: #166534; }
+
+    .card.checked-in .btn-action { background: #166534; color: white; }
+    .card.rsvp-only .btn-action { background: #3b82f6; color: white; }
+    .card.absent .btn-action { background: #991b1b; color: white; }
 
     .btn-create { background: var(--primary); color: white; margin-top: 5px; }
     .btn-end { background: var(--danger); color: white; margin-top: auto; }
-    .btn-form { background: #f59e0b; color: white; } /* Mongo Button */
+    .btn-rsvp { background: var(--primary); color: white; padding: 12px 25px; width: auto; margin-top: 0; }
+    .btn-profile { background: var(--info); color: white; margin-top: 5px; }
+    .btn-save { background: var(--success); color: white; font-size: 1rem; }
+    .btn-cancel { background: #94a3b8; color: white; margin-top: 10px; }
+    .btn-info { background: white; border: 1px solid #cbd5e1; color: #475569; margin-top: 5px; }
+    .btn-info:hover { background: #f1f5f9; }
 
     .admin-only { display: none; }
-
+    .student-only { display: none; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
   </style>
 </head>
@@ -62,8 +102,13 @@
       <select id="userSelector" onchange="switchUser()"></select>
     </div>
 
-    <div>
-      <label for="eventSelector">Active Event:</label>
+    <div class="student-only">
+      <button class="btn btn-profile" onclick="renderProfilePage()">👤 My Profile / Med Info</button>
+      <button class="btn btn-action" onclick="renderStudentEventList()">📅 Upcoming Events</button>
+    </div>
+
+    <div class="admin-only">
+      <label for="eventSelector">Manage Active Event:</label>
       <select id="eventSelector" onchange="refreshDashboard()">
         <option value="">Loading...</option>
       </select>
@@ -72,7 +117,7 @@
     <div class="admin-only" style="border-top: 1px solid #334155; padding-top: 20px;">
       <label>New Event (Saves to Mongo)</label>
       <input type="text" id="newEventName" placeholder="Event Name...">
-      <button class="btn btn-create" onclick="createEventType()">+ Create & Attach Schema</button>
+      <button class="btn btn-create" onclick="createEventType()">+ Create Event</button>
     </div>
 
     <button class="btn btn-end admin-only" onclick="endEvent()">🏁 End Active Event</button>
@@ -81,23 +126,28 @@
   <main class="main">
     <div class="header">
       <div>
-        <h1 id="eventTitle">Select an Event</h1>
-        <div style="color: #64748b; margin-top: 5px;" id="eventSubtitle">No event active</div>
+        <h1 id="pageTitle">Dashboard</h1>
+        <div style="color: #64748b; margin-top: 5px;" id="pageSubtitle">Select an option</div>
       </div>
 
-      <div id="liveCountBadge" class="live-count" style="display:none;">
-        <div class="dot"></div>
-        <span id="countValue">0</span> Present
+      <div class="header-controls">
+        <input type="text" id="searchBar" class="admin-only" placeholder="🔍 Search Roster..." onkeyup="refreshDashboard()">
+
+        <div id="liveCountBadge" class="live-count" style="display:none;">
+          <div class="dot"></div>
+          <span id="countValue">0</span> Present
+        </div>
       </div>
     </div>
 
-    <div id="roster" class="grid"></div>
+    <div id="contentArea" class="grid"></div>
   </main>
 
   <script>
     const API_URL = "/graphql";
     let currentUserRole = "Student";
     let currentUserId = null;
+    let allEventsCache = [];
 
     async function sendGQL(query) {
       try {
@@ -110,9 +160,7 @@
       } catch(e) { console.error(e); return null; }
     }
 
-    // --- INITIALIZATION ---
     async function init() {
-      // Load Users
       const userData = await sendGQL(`query { people { id name role } }`);
       const userSel = document.getElementById('userSelector');
       if(userData) {
@@ -120,20 +168,26 @@
           userSel.innerHTML += `<option value="${u.role}" data-id="${u.id}">${u.name} (${u.role})</option>`;
         });
       }
-      switchUser(); // Set initial role
       await loadEvents();
+      switchUser();
     }
 
     async function loadEvents(selectId = null) {
       const data = await sendGQL(`query { getAllEvents { id name } }`);
       const sel = document.getElementById('eventSelector');
       sel.innerHTML = "";
+      allEventsCache = [];
+
       if(data && data.getAllEvents.length > 0) {
         data.getAllEvents.forEach(e => {
-          const selected = (selectId && parseInt(selectId) == e.id) ? "selected" : "";
-          sel.innerHTML += `<option value="${e.id}" ${selected}>${e.name}</option>`;
+            if (!e.name.startsWith("ARCHIVED")) {
+                allEventsCache.push(e);
+                const selected = (selectId && parseInt(selectId) == e.id) ? "selected" : "";
+                sel.innerHTML += `<option value="${e.id}" ${selected}>${e.name}</option>`;
+            }
         });
-        refreshDashboard();
+        if(allEventsCache.length > 0) refreshDashboard();
+        else sel.innerHTML = "<option value=''>No Active Events</option>";
       } else {
         sel.innerHTML = "<option value=''>No Events Found</option>";
       }
@@ -144,140 +198,285 @@
       currentUserRole = sel.value;
       currentUserId = sel.options[sel.selectedIndex].getAttribute('data-id');
 
-      const adminEls = document.querySelectorAll('.admin-only');
-      adminEls.forEach(el => el.style.display = (currentUserRole === 'Leader') ? 'block' : 'none');
-      refreshDashboard();
+      const isAdmin = (currentUserRole === 'Leader' || currentUserRole.includes('Pastor'));
+
+      document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+      document.querySelectorAll('.student-only').forEach(el => el.style.display = isAdmin ? 'none' : 'block');
+
+      if (isAdmin) refreshDashboard();
+      else renderStudentEventList();
     }
 
-    // --- CORE LOGIC ---
+    // --- LEADER VIEW (Dashboard) ---
     async function refreshDashboard() {
+      if(currentUserRole !== 'Leader' && !currentUserRole.includes('Pastor')) return;
+
       const eventId = document.getElementById('eventSelector').value;
-      if(!eventId) return;
+      if(!eventId) {
+        document.getElementById('contentArea').innerHTML = "";
+        document.getElementById('liveCountBadge').style.display = 'none';
+        return;
+      }
 
       const eventName = document.getElementById('eventSelector').selectedOptions[0].text;
-      document.getElementById('eventTitle').innerText = eventName;
-      document.getElementById('eventSubtitle').innerText = `ID: ${eventId}`;
+      document.getElementById('pageTitle').innerText = eventName;
+      document.getElementById('pageSubtitle').innerText = `Managing ID: ${eventId}`;
+      document.getElementById('contentArea').className = "grid";
 
-      // 1. Fetch Data (MySQL Users + Redis Roster + Redis Count)
       const data = await sendGQL(`
         query {
           people { id name role }
           eventLiveRoster(eventId: ${eventId})
+          getRsvpList(eventId: ${eventId})
           getActiveCount(eventId: ${eventId})
         }
       `);
 
-      // 2. Update Live Count Badge (Redis SCARD)
       document.getElementById('liveCountBadge').style.display = 'flex';
       document.getElementById('countValue').innerText = data.getActiveCount;
 
-      // 3. Render Roster
-      const rosterDiv = document.getElementById('roster');
-      rosterDiv.innerHTML = "";
+      let rosterList = data.people.map(p => {
+        p.isCheckedIn = data.eventLiveRoster.includes(p.id);
+        p.isRsvp = data.getRsvpList.includes(p.id);
+        return p;
+      });
 
-      data.people.forEach(p => {
-        const isPresent = data.eventLiveRoster.includes(p.id);
-        const cardClass = isPresent ? "present" : "absent";
-        const statusText = isPresent ? "✅ Checked In" : "❌ Not Here";
+      rosterList.sort((a, b) => {
+          if (a.isCheckedIn !== b.isCheckedIn) return a.isCheckedIn ? -1 : 1;
+          if (a.isRsvp !== b.isRsvp) return a.isRsvp ? -1 : 1;
+          return 0;
+      });
 
-        let actionHtml = "";
+      const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+      if(searchTerm) rosterList = rosterList.filter(p => p.name.toLowerCase().includes(searchTerm));
 
-        // LEADER View: Scan In/Out Buttons
-        if(currentUserRole === 'Leader') {
-          const btnText = isPresent ? "Scan Out" : "Scan In";
-          const fn = isPresent ? "checkOut" : "checkIn";
-          actionHtml = `<button class="btn btn-action" onclick="${fn}(${p.id})">${btnText}</button>`;
+      const container = document.getElementById('contentArea');
+      container.innerHTML = "";
+
+      rosterList.forEach(p => {
+        // --- 1. Leader Check: Hide RSVP icon for Leaders ---
+        const isTargetLeader = (p.role === 'Leader' || p.role.includes('Pastor'));
+
+        let cardClass = "absent";
+        let statusIcon = "<span class='rsvp-no'>❌ No RSVP</span>";
+        let btnText = "Scan In";
+        let fn = "checkIn";
+
+        if (p.isCheckedIn) {
+            cardClass = "checked-in";
+            statusIcon = "<span class='rsvp-yes'>✅ Present</span>";
+            btnText = "Scan Out";
+            fn = "checkOut";
+        } else if (p.isRsvp) {
+            cardClass = "rsvp-only";
+            statusIcon = "<span class='rsvp-yes'>✅ RSVP'd</span>";
+            btnText = "Scan In";
+            fn = "checkIn";
         }
-        // STUDENT View: Custom Data Form (Mongo)
-        else if (p.id == currentUserId) {
-             actionHtml = `
-                <div style="margin-top:10px; font-weight:bold;">${statusText}</div>
-                <button class="btn btn-form" onclick="submitCustomData(${eventId})">📝 Update Snack Prefs & Allergies</button>
-             `;
-        } else {
-            actionHtml = `<div style="margin-top:10px; color:#94a3b8;">${statusText}</div>`;
+
+        // Override visual style if the person in the card is a leader
+        if (isTargetLeader) {
+            cardClass = "leader-view";
+            statusIcon = "<span style='color:#64748b'>🛡️ Leader</span>";
         }
 
-        rosterDiv.innerHTML += `
+        container.innerHTML += `
           <div class="card ${cardClass}">
-            <h3 style="margin:0;">${p.name}</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">${p.name}</h3>
+                ${statusIcon}
+            </div>
             <small style="color:#64748b;">${p.role}</small>
-            ${actionHtml}
+
+            <div style="margin-top:auto;">
+                <button class="btn btn-action" onclick="${fn}(${p.id})">${btnText}</button>
+                <button class="btn btn-info" onclick="viewUserProfile(${p.id}, '${p.name}')">📄 View Info</button>
+            </div>
           </div>
         `;
       });
     }
 
-    // --- MUTATIONS ---
+    // --- LEADER VIEW (Read-Only Profile) ---
+    async function viewUserProfile(id, name) {
+        // Fetch from Mongo
+        const data = await sendGQL(`query { getStudentProfile(studentId: ${id}) }`);
+        const profile = JSON.parse(data.getStudentProfile || "{}");
 
-    // 1. Create Event + Mongo Schema
-    async function createEventType() {
-      const name = document.getElementById('newEventName').value;
-      if(!name) return;
+        document.getElementById('contentArea').className = ""; // Remove grid
+        document.getElementById('contentArea').innerHTML = `
+            <div class="profile-view-readonly">
+                <h2 style="margin-top:0;">Medical Info: ${name}</h2>
+                <hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:20px;">
 
-      // Default Schema we attach to every new event
-      const defaultSchema = JSON.stringify({
-        "fields": ["allergies", "snack_preference", "emergency_contact"],
-        "required": ["emergency_contact"]
-      });
+                <div class="readonly-field">
+                    <div class="readonly-label">Allergies</div>
+                    <div class="readonly-value">${profile.allergies || 'None listed'}</div>
+                </div>
 
-      // Escape quotes for GraphQL
-      const schemaSafe = defaultSchema.replace(/"/g, '\\"');
+                <div class="readonly-field">
+                    <div class="readonly-label">Medical Conditions / Meds</div>
+                    <div class="readonly-value">${profile.medical || 'None listed'}</div>
+                </div>
 
-      const res = await sendGQL(`mutation { createEventType(name: "${name}", schemaJson: "${schemaSafe}") }`);
-      const newId = res.createEventType.split(':')[0];
+                <div class="readonly-field">
+                    <div class="readonly-label">Emergency Contact Name</div>
+                    <div class="readonly-value">${profile.contactName || 'Not provided'}</div>
+                </div>
 
-      alert(`Event Created & MongoDB Schema Attached!`);
-      document.getElementById('newEventName').value = "";
-      await loadEvents(newId);
+                <div class="readonly-field">
+                    <div class="readonly-label">Emergency Contact Phone</div>
+                    <div class="readonly-value" style="color:var(--primary); font-weight:bold;">${profile.contactPhone || 'Not provided'}</div>
+                </div>
+
+                <div class="readonly-field">
+                    <div class="readonly-label">Last Updated</div>
+                    <div class="readonly-value" style="font-size:0.9rem; color:#94a3b8;">${profile.lastUpdated || 'Never'}</div>
+                </div>
+
+                <button class="btn btn-action" onclick="refreshDashboard()">⬅ Back to Roster</button>
+            </div>
+        `;
     }
 
-    // 2. Redis Check In
+    // --- STUDENT VIEW (Event List) ---
+    function renderStudentEventList() {
+      document.getElementById('pageTitle').innerText = "Upcoming Events";
+      document.getElementById('pageSubtitle').innerText = "Select an event to RSVP";
+      document.getElementById('liveCountBadge').style.display = 'none';
+
+      const container = document.getElementById('contentArea');
+      container.className = "";
+      container.innerHTML = "";
+
+      if(allEventsCache.length === 0) {
+        container.innerHTML = "<p>No upcoming events.</p>";
+        return;
+      }
+
+      allEventsCache.forEach(e => {
+        container.innerHTML += `
+          <div class="event-list-item">
+            <div class="event-info">
+              <h3>${e.name}</h3>
+              <span>Event ID: ${e.id}</span>
+            </div>
+            <button class="btn btn-rsvp" onclick="studentRSVP(${e.id})">RSVP</button>
+          </div>
+        `;
+      });
+    }
+
+    // --- STUDENT VIEW (Profile Editor) ---
+    async function renderProfilePage() {
+      document.getElementById('pageTitle').innerText = "My Profile";
+      document.getElementById('pageSubtitle').innerText = "Manage medical info & allergies";
+      document.getElementById('liveCountBadge').style.display = 'none';
+
+      const container = document.getElementById('contentArea');
+      container.className = "";
+      container.innerHTML = "<p>Loading profile...</p>";
+
+      const data = await sendGQL(`query { getStudentProfile(studentId: ${currentUserId}) }`);
+      const profile = JSON.parse(data.getStudentProfile || "{}");
+
+      // --- 2. Split Contact Fields ---
+      container.innerHTML = `
+        <div class="profile-form">
+            <div class="form-group">
+                <label>Allergies</label>
+                <input type="text" id="profAllergies" value="${profile.allergies || ''}" placeholder="e.g. Peanuts, Bee Stings">
+            </div>
+            <div class="form-group">
+                <label>Medical Conditions / Meds</label>
+                <textarea id="profMeds" rows="3" placeholder="e.g. Inhaler for Asthma">${profile.medical || ''}</textarea>
+            </div>
+
+            <div style="display:flex; gap:15px;">
+                <div class="form-group" style="flex:1;">
+                    <label>Emergency Contact Name</label>
+                    <input type="text" id="profContactName" value="${profile.contactName || ''}" placeholder="e.g. John Doe">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>Emergency Contact Phone</label>
+                    <input type="text" id="profContactPhone" value="${profile.contactPhone || ''}" placeholder="e.g. 555-0199">
+                </div>
+            </div>
+
+            <button class="btn btn-save" onclick="saveProfile()">💾 Save Profile</button>
+            <button class="btn btn-cancel" onclick="renderStudentEventList()">Cancel</button>
+        </div>
+      `;
+    }
+
+    async function saveProfile() {
+        const allergies = document.getElementById('profAllergies').value;
+        const medical = document.getElementById('profMeds').value;
+        const contactName = document.getElementById('profContactName').value;
+        const contactPhone = document.getElementById('profContactPhone').value;
+
+        // Bundle into JSON
+        const dataPacket = {
+            "allergies": allergies,
+            "medical": medical,
+            "contactName": contactName,
+            "contactPhone": contactPhone,
+            "lastUpdated": new Date().toISOString()
+        };
+
+        const dataJson = JSON.stringify(dataPacket).replace(/"/g, '\\"');
+        const res = await sendGQL(`mutation { updateStudentProfile(studentId: ${currentUserId}, dataJson: "${dataJson}") }`);
+
+        alert(res.updateStudentProfile);
+        renderStudentEventList();
+    }
+
+    // --- ACTIONS ---
     async function checkIn(id) {
       const eid = document.getElementById('eventSelector').value;
       await sendGQL(`mutation { checkInStudent(eventId: ${eid}, studentId: ${id}) }`);
       refreshDashboard();
     }
 
-    // 3. Redis Check Out
     async function checkOut(id) {
       const eid = document.getElementById('eventSelector').value;
       await sendGQL(`mutation { checkOutStudent(eventId: ${eid}, studentId: ${id}) }`);
       refreshDashboard();
     }
 
-    // 4. Mongo Custom Data (Updated for Allergies)
-    async function submitCustomData(eventId) {
-      // Question 1: Snacks
-      const snack = prompt("Enter your snack preference:", "Chips");
-      if(!snack) return; // Stop if they hit Cancel
-
-      // Question 2: Allergies (New!)
-      const allergies = prompt("Any allergies we should know about? (Leave blank if none):", "");
-
-      // Bundle both into one JSON object
-      const dataPacket = {
-        "snack": snack,
-        "allergies": allergies || "None", // Default to "None" if empty
-        "timestamp": new Date().toISOString()
-      };
-
-      const dataJson = JSON.stringify(dataPacket);
-      // Escape quotes for GraphQL
-      const dataSafe = dataJson.replace(/"/g, '\\"');
-
-      await sendGQL(`mutation { submitCustomData(eventId: ${eventId}, studentId: ${currentUserId}, dataJson: "${dataSafe}") }`);
-      alert("Preferences & Allergies saved to MongoDB!");
-    }
-
-    // 5. End Event (Flush Redis -> MySQL)
     async function endEvent() {
       const eid = document.getElementById('eventSelector').value;
-      if(!confirm("End this event? This will save attendance to MySQL and clear Redis.")) return;
+      if(!eid) return;
+      if(!confirm("End this event? Saves to MySQL, clears Redis, and archives event.")) return;
 
       const res = await sendGQL(`mutation { endEvent(eventId: ${eid}) }`);
       alert(res.endEvent);
+      await loadEvents();
       refreshDashboard();
+    }
+
+    async function createEventType() {
+        const name = document.getElementById('newEventName').value;
+        if(!name) return;
+        const defaultSchema = JSON.stringify({ "fields": ["snack"], "required": [] }).replace(/"/g, '\\"');
+        const res = await sendGQL(`mutation { createEventType(name: "${name}", schemaJson: "${defaultSchema}") }`);
+        alert("Event Created!");
+        document.getElementById('newEventName').value = "";
+        await loadEvents();
+        refreshDashboard();
+    }
+
+    async function studentRSVP(eventId) {
+      const snack = prompt("What kind of snacks do you prefer?", "Chips");
+      if(!snack) return;
+
+      const dataPacket = { "snack": snack, "timestamp": new Date().toISOString() };
+      const dataJson = JSON.stringify(dataPacket).replace(/"/g, '\\"');
+
+      await sendGQL(`mutation { submitCustomData(eventId: ${eventId}, studentId: ${currentUserId}, dataJson: "${dataJson}") }`);
+      await sendGQL(`mutation { rsvpStudent(eventId: ${eventId}, studentId: ${currentUserId}) }`);
+
+      alert("RSVP Confirmed! See you there!");
     }
 
     init();

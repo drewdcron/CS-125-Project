@@ -1,63 +1,99 @@
 -- YGMSData.sql
--- Robust Data Seeder
--- 1. Clears all existing data
--- 2. Resets ID counters to 1
--- 3. Inserts fresh data with Roles
+-- STRICT ORDER RESET
+-- Explicit IDs included to prevent Foreign Key Errors
 
 USE ygms_db;
 
--- People (IDs 1-12)
-INSERT INTO Person (Name, Email, PhoneNumber, Role) VALUES
-('Pastor Mike Davis', 'mike.davis@church.org', '555-1001', 'Leader'), -- ID 1
-('Sarah Chen', 'sarah.chen@church.org', '555-1002', 'Leader'),      -- ID 2
-('Maria Gomez', 'maria.g@volunteer.net', '555-1003', 'Volunteer'),    -- ID 3
-('Chris Evans', 'chris.e@volunteer.net', '555-1004', 'Volunteer'),    -- ID 4
-('Tom Smith', 'tom.smith@home.net', '555-2001', 'Parent'),       -- ID 5
-('Alice Jones', 'alice.jones@home.net', '555-2002', 'Parent'),   -- ID 6
-('Bob Brown', 'bob.brown@home.net', '555-2003', 'Parent'),       -- ID 7
-('Ethan Smith', 'ethan.s@youth.org', '555-3001', 'Student'),      -- ID 8
-('Maya Jones', 'maya.j@youth.org', '555-3002', 'Student'),        -- ID 9
-('Sam Brown', 'sam.b@youth.org', '555-3003', 'Student'),          -- ID 10
-('Chloe Green', 'chloe.g@youth.org', '555-3004', 'Student'),      -- ID 11
-('Liam Wilson', 'liam.w@youth.org', '555-3005', 'Student');       -- ID 12
+-- =========================================================
+-- 1. POPULATE SEED DATA
+-- =========================================================
 
--- Roles
-INSERT INTO YouthPastor VALUES (1, '2019-08-01');
-INSERT INTO Leader VALUES (2);
-INSERT INTO Volunteer VALUES (3, 'Music'), (4, 'Tech');
-INSERT INTO ParentGuardian VALUES (5, 'Father'), (6, 'Mother'), (7, 'Father');
+-- We use EXPLICIT IDs in the INSERT statement to ensure Foreign Keys always match.
+INSERT INTO Person (ID, Name, Email, Role) VALUES
+(1, 'Pastor Mike', 'mike@ygms.com', 'Youth Pastor'),
+(2, 'Sarah Chen', 'sarah@ygms.com', 'Leader'),
+(3, 'John Miller', 'john@ygms.com', 'Leader'),
+(4, 'Parent One', 'p1@test.com', 'Parent'),
+(5, 'Parent Two', 'p2@test.com', 'Parent'),
+(6, 'Volunteer Dave', 'dave@test.com', 'Volunteer'),
+(7, 'Ethan Smith', 'ethan@test.com', 'Student'),
+(8, 'Olivia Jones', 'olivia@test.com', 'Student'),
+(9, 'Liam Brown', 'liam@test.com', 'Student'),
+(10, 'Emma Davis', 'emma@test.com', 'Student'),
+(11, 'Noah Wilson', 'noah@test.com', 'Student'),
+(12, 'Ava Johnson', 'ava@test.com', 'Student'),
+(13, 'Pastor Emily', 'emily@ygms.com', 'Youth Pastor'),
+(14, 'Leader Alex', 'alex@ygms.com', 'Leader'),
+(15, 'Leader Jordan', 'jordan@ygms.com', 'Leader'),
+(16, 'Leader Taylor', 'taylor@ygms.com', 'Leader'),
+(17, 'Volunteer Lisa', 'lisa@test.com', 'Volunteer'),
+(18, 'Volunteer Tom', 'tom@test.com', 'Volunteer'),
+(19, 'Volunteer Karen', 'karen@test.com', 'Volunteer'),
+(20, 'Volunteer Bob', 'bob@test.com', 'Volunteer'),
+(21, 'Mrs. Robinson', 'robinson@test.com', 'Parent'),
+(22, 'Mr. Garcia', 'garcia@test.com', 'Parent'),
+(23, 'Ms. Lee', 'lee@test.com', 'Parent'),
+(24, 'Mr. Patel', 'patel@test.com', 'Parent'),
+(25, 'Mrs. Kim', 'kim@test.com', 'Parent'),
+(26, 'Mr. Johnson', 'johnson@test.com', 'Parent'),
+(27, 'Lucas Robinson', 'lucas@test.com', 'Student'),
+(28, 'Mia Robinson', 'mia@test.com', 'Student'),
+(29, 'Isabella Garcia', 'bella@test.com', 'Student'),
+(30, 'Mateo Garcia', 'mateo@test.com', 'Student'),
+(31, 'Sophia Lee', 'sophia@test.com', 'Student'),
+(32, 'Jackson Patel', 'jack@test.com', 'Student'),
+(33, 'Aiden Patel', 'aiden@test.com', 'Student'),
+(34, 'Chloe Kim', 'chloe@test.com', 'Student'),
+(35, 'Elijah Johnson', 'elijah@test.com', 'Student'),
+(36, 'Grace Johnson', 'grace@test.com', 'Student'),
+(37, 'Benji Button', 'benji@test.com', 'Student'),
+(38, 'Zoey Deschanel', 'zoey@test.com', 'Student'),
+(39, 'Hannah Montana', 'hannah@test.com', 'Student'),
+(40, 'Peter Parker', 'peter@test.com', 'Student'),
+(41, 'Miles Morales', 'miles@test.com', 'Student'),
+(42, 'Gwen Stacy', 'gwen@test.com', 'Student'),
+(43, 'Harry Potter', 'harry@test.com', 'Student'),
+(44, 'Ron Weasley', 'ron@test.com', 'Student');
 
--- Youth (Corrected Parent IDs: 5, 6, 7)
-INSERT INTO Youth (PersonID, ParentGuardianID, GradeLevel, BirthDate) VALUES
-(8, 5, 9, '2009-05-15'),  -- Ethan linked to Tom (5)
-(9, 6, 10, '2008-01-20'), -- Maya linked to Alice (6)
-(10, 7, 11, '2007-11-03'), -- Sam linked to Bob (7)
-(11, NULL, 12, '2006-07-28'), -- Chloe (No parent)
-(12, 5, 9, '2009-12-01');  -- Liam linked to Tom (5)
+-- SUB-TABLE INSERTS (Now guaranteed to work)
+INSERT INTO YouthPastor VALUES (1, '2020-01-01'), (13, '2022-06-15');
+INSERT INTO Leader VALUES (2), (3), (14), (15), (16);
+INSERT INTO Volunteer VALUES (6, 'Audio/Visual'), (17, 'Kitchen/Snacks'), (18, 'Security'), (19, 'Check-In Desk'), (20, 'Worship Band');
+INSERT INTO ParentGuardian VALUES (4, 'Father'), (5, 'Mother'), (21, 'Mother'), (22, 'Father'), (23, 'Mother'), (24, 'Father'), (25, 'Mother'), (26, 'Father');
 
--- Medical
-INSERT INTO MedicalInfo VALUES (8, 'Allergies'), (9, 'Asthma'), (10, 'None');
+-- Youth Inserts
+INSERT INTO Youth VALUES
+(7, 4, 10, '2008-05-15'), (8, 4, 11, '2007-08-20'), (9, 5, 9, '2009-02-10'),
+(10, 5, 12, '2006-11-30'), (11, 4, 10, '2008-01-01'), (12, 5, 9, '2009-06-15'),
+(27, 21, 8, '2010-03-12'), (28, 21, 10, '2008-07-22'),
+(29, 22, 11, '2007-12-05'), (30, 22, 9, '2009-09-09'),
+(31, 23, 12, '2006-05-14'), (32, 24, 7, '2011-02-28'),
+(33, 24, 9, '2009-11-11'), (34, 25, 10, '2008-10-31'),
+(35, 26, 8, '2010-01-20'), (36, 26, 11, '2007-04-04'),
+(37, 21, 6, '2012-06-06'), (38, 22, 12, '2006-08-08'),
+(39, 23, 8, '2010-09-09'), (40, 24, 11, '2007-10-10'),
+(41, 25, 9, '2009-12-12'), (42, 26, 10, '2008-01-23'),
+(43, 4, 7, '2011-07-31'), (44, 5, 7, '2011-03-01');
 
--- Events
-INSERT INTO Event VALUES
-(1, '2025-12-10', '18:30:00', 'Auditorium', 150),
-(2, '2025-12-04', '19:00:00', 'Room 101', 12),
-(3, '2025-12-04', '19:00:00', 'Room 102', 12),
-(4, '2025-12-03', '17:00:00', 'Office', 5);
+-- =========================================================
+-- 3. EVENTS
+-- =========================================================
+INSERT INTO Event (Date, Time, Location, MaxCapacity) VALUES
+('2025-12-25', '18:00:00', 'Main Hall', 100), -- 1
+('2025-11-10', '19:00:00', 'Room 204', 15),  -- 2
+('2025-11-12', '19:00:00', 'Room 205', 15),  -- 3
+('2025-01-15', '18:30:00', 'Sanctuary', 200), -- 4
+('2025-02-14', '20:00:00', 'Youth Room', 50); -- 5
 
-INSERT INTO OneTimeEvent VALUES (1, 'Ugly Sweater', 'Fun', 5.00, TRUE);
-INSERT INTO SmallGroup VALUES (2, 2, 'Parables', 'Wed'), (3, 2, 'Faith', 'Wed');
-INSERT INTO Meeting VALUES (4, 'Planning');
+INSERT INTO OneTimeEvent VALUES (1, 'Ugly Sweater Party', 'Wear your worst sweater!', 0.00, FALSE);
+INSERT INTO SmallGroup VALUES (2, 2, 'The Parables of Jesus', 'Wednesday');
+INSERT INTO SmallGroup VALUES (3, 3, 'Foundations of Faith', 'Friday');
+INSERT INTO Meeting VALUES (4, 'January Calendar Planning');
+INSERT INTO OneTimeEvent VALUES (5, 'Late Night Pizza Party', 'Pizza and Games', 5.00, TRUE);
 
--- Links (Using IDs 8-12 for Youth)
-INSERT INTO SmallGroupMembers VALUES (2, 8, '2025-09-01'), (2, 11, '2025-09-01'), (3, 9, '2025-10-15'), (3, 10, '2025-10-15'), (3, 12, '2025-11-20');
-INSERT INTO OneTimeEventYouth VALUES (1, 8, 'Registered'), (1, 9, 'Registered'), (1, 10, 'Registered'), (1, 11, 'Waitlist'), (1, 12, 'Registered');
-
--- Waivers (Youth ID, Parent ID)
-INSERT INTO PermissionWaiver (YouthID, PersonID, DocumentType, DateSigned, DateExpires, Status) VALUES
-(8, 5, 'Waiver', '2025-10-15', '2026-10-15', 'Signed'),
-(9, 6, 'Waiver', '2025-10-20', '2026-10-20', 'Signed');
-
-INSERT INTO PermissionWaiverEvent VALUES (1, 1, TRUE), (1, 2, TRUE);
-
-SELECT * FROM Person;
+-- =========================================================
+-- 4. SYNC TO DROPDOWN
+-- =========================================================
+INSERT IGNORE INTO EventType (Name) SELECT Name FROM OneTimeEvent;
+INSERT IGNORE INTO EventType (Name) SELECT CONCAT(Theme, ' (Small Group)') FROM SmallGroup;
+INSERT IGNORE INTO EventType (Name) SELECT MainTopic FROM Meeting;

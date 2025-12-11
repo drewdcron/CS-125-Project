@@ -58,6 +58,7 @@ class EventTypeORM(Base):
     __tablename__ = "EventType"
     ID = Column(Integer, primary_key=True, autoincrement=True)
     Name = Column(String(100), unique=True)
+    Status = Column(String(50), default="Active") # <--- MUST BE HERE
 
 
 class AttendanceORM(Base):
@@ -77,6 +78,7 @@ mongo_client = MongoClient(f"mongodb://{settings.MONGO_HOST}:27017")
 mongo_db = mongo_client["ygms_mongo_db"]
 event_types_collection = mongo_db["event_types"]  # Stores schemas
 event_custom_data_collection = mongo_db["event_custom_data"]  # Stores answers
+student_profiles_collection = mongo_db["student_profiles"]
 
 # Redis
 try:
@@ -102,6 +104,7 @@ class PersonType:
 class EventTypeObj:
     id: int
     name: str
+    status: str
 
 
 @strawberry.type
@@ -136,9 +139,17 @@ class Query:
         db = SessionLocal()
         try:
             events = db.query(EventTypeORM).all()
-            return [EventTypeObj(id=e.ID, name=e.Name) for e in events]
+            # Ensure status=e.Status is passed here
+            return [EventTypeObj(id=e.ID, name=e.Name, status=e.Status or "Active") for e in events]
         finally:
             db.close()
+
+    @strawberry.field
+    def get_rsvp_list(self, event_id: int) -> List[int]:
+        # New list just for RSVPs
+        if not redis_client: return []
+        members = redis_client.smembers(f"event:{event_id}:rsvp")
+        return [int(m) for m in members]
 
     # --- Redis Queries (Live Roster) ---
 
@@ -184,6 +195,14 @@ class Query:
             ))
         return results
 
+    @strawberry.field
+    def get_student_profile(self, student_id: int) -> str:
+        # Fetches permanent profile from Mongo
+        doc = student_profiles_collection.find_one({"studentId": student_id})
+        if doc:
+            return json.dumps(doc.get("data", {}))
+        return "{}"
+
 
 # --- 5. MUTATIONS (WRITE) ---
 @strawberry.type
@@ -215,6 +234,13 @@ class Mutation:
             return f"Error: {str(e)}"
         finally:
             db.close()
+
+    @strawberry.mutation
+    def rsvp_student(self, event_id: int, student_id: int) -> str:
+        # Adds to the RSVP list (Intention), NOT the Check-In list (Presence)
+        if not redis_client: return "Redis Error"
+        redis_client.sadd(f"event:{event_id}:rsvp", student_id)
+        return "RSVP Confirmed"
 
     @strawberry.mutation
     def update_event_schema(self, type_id: int, schema_json: str) -> str:
@@ -276,19 +302,32 @@ class Mutation:
 
         return "Checked Out"
 
+    @strawberry.mutation
+    def update_student_profile(self, student_id: int, data_json: str) -> str:
+        # Upsert: Update if exists, Insert if it doesn't
+        try:
+            data_dict = json.loads(data_json)
+            student_profiles_collection.update_one(
+                {"studentId": student_id},
+                {"$set": {"data": data_dict}},
+                upsert=True
+            )
+            return "Profile Updated Successfully"
+        except Exception as e:
+            return f"Error: {e}"
+
     # --- End Event Logic (Redis -> MySQL) ---
 
     @strawberry.mutation
     def end_event(self, event_id: int) -> str:
         if not redis_client: return "Redis Error"
 
-        # 1. Get final roster
-        key_roster = f"event:{event_id}:checkedIn"
-        ids = redis_client.smembers(key_roster)
-
-        # 2. Persist to MySQL
         db = SessionLocal()
         try:
+            # 1. SAVE ATTENDANCE
+            key_roster = f"event:{event_id}:checkedIn"
+            ids = redis_client.smembers(key_roster)
+
             count = 0
             for s_id in ids:
                 exists = db.query(AttendanceORM).filter_by(EventID=event_id, StudentID=int(s_id)).first()
@@ -297,16 +336,31 @@ class Mutation:
                     count += 1
             db.commit()
 
-            # 3. Cleanup Redis (Requirement: DEL all keys)
+            # 2. UPDATE STATUS (Soft Delete)
+            event = db.query(EventTypeORM).filter_by(ID=event_id).first()
+            event_name = "Unknown"
+
+            if event:
+                event_name = event.Name
+                event.Status = "Ended"  # <--- Change this from db.delete()
+                db.commit()
+
+            # 3. CLEANUP REDIS
             redis_client.delete(key_roster)
             redis_client.delete(f"event:{event_id}:checkInTimes")
             redis_client.delete(f"event:{event_id}:checkOutTimes")
+            redis_client.delete(f"event:{event_id}:rsvp")
 
-            return f"Event Ended. Saved {count} records."
+            return f"Event '{event_name}' ended. {count} records saved."
+
         except Exception as e:
+            db.rollback()
             return f"Error: {e}"
         finally:
             db.close()
+
+
+
 
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)
@@ -318,16 +372,32 @@ app.include_router(graphql_app, prefix="/graphql")
 
 @app.get("/")
 def read_root():
-    return {"message":"Welcome to the YGMS!",
-            "graphql_url":"http://127.0.0.1:8005/graphql",
-            "frontend_url":"http://127.0.0.1:8005/frontend"}
+    return {
+        "message": "YGMS Backend Active",
+        "GraphQL": "http://127.0.0.1:8005/graphql",
+        "leader_portal": "http://127.0.0.1:8005/frontend/leader",
+        "guest_portal": "http://127.0.0.1:8005/frontend/guest"
+    }
 
-@app.get("/frontend", response_class=HTMLResponse)
-def serve_frontend():
-    with open("frontend.html", "r", encoding="utf-8") as f: return f.read()
+# Leader Portal
+@app.get("/frontend/leader", response_class=HTMLResponse)
+def serve_leader():
+    with open("html_files/leader.html", "r", encoding="utf-8") as f: return f.read()
+
+# Guest Portal
+@app.get("/frontend/guest", response_class=HTMLResponse)
+def serve_guest():
+    with open("html_files/guest.html", "r", encoding="utf-8") as f: return f.read()
 
 
 if __name__ == "__main__":
-    print(f"🚀 STARTUP CHECK: Connecting to MySQL on Port {settings.MYSQL_PORT}")
+    print(f"STARTUP CHECK: Connecting to MySQL on Port {settings.MYSQL_PORT}")
 
     uvicorn.run(app, host="127.0.0.1", port=8005)
+
+
+# Work on
+# fix the multiple rsvp's
+# recreate readme
+# make create user for leaders and guests
+
