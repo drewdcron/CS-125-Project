@@ -139,22 +139,25 @@ Install the required dependencies from the requirements file:
 pip install -r requirements.txt
 ```
 
-Start the FastAPI server:
+Start the server:
 ```bash
 python3 main.py
 ```
 ### 4. Test API:
 
-#### Option A: Interactive Dashboard (Frontend)
-Open your browser to the following URL: http://127.0.0.1:8005/frontend
-- Login: Select a user from the dropdown (e.g., "Pastor Mike" for Admin features, "Ethan Smith" for Student features).
-- Check-In: Select an event and use the buttons to interact with Redis (Live Roster).
-- Forms: Log in as a student to submit custom forms (MongoDB).
+#### Leader Portal
+URL: http://127.0.0.1:8005/frontend/leader
+- Login as a Leader or Pastor.
+- Manage events, view the live roster, and access the "Danger Zone" for administrative tasks.
 
-#### Option B: Built-in GraphiQL Interface
-Test using Insomnia or built-in GraphiQL interface
-- URL: http://127.0.0.1:8005/graphql
-- Method: POST
+#### Guest Portal
+URL: http://127.0.0.1:8005/frontend/guest
+- Login as a Student,Parent, or volunteer.
+- Search for events, RSVP, and edit medical profiles.
+
+#### GraphQL Playground
+URL: http://127.0.0.1:8005/graphql
+- Interactive interface to test API queries and mutations.
 
 Sample Query (Reads from MySQL & Redis):
 
@@ -166,21 +169,20 @@ query {
     role
   }
   eventLiveRoster(eventId: 1)
-  getActiveCount(eventId: 1)
 }
 ```
 
 Sample Mutation (Writes to Redis):
 ```bash
 mutation {
-  checkInStudent(eventId: 1, studentId: 8)
+  checkInStudent(eventId: 1, studentId: 19)
 }
 ```
 
 Sample Mutation (Writes to MongoDB):
 ```bash
 mutation {
-  submitCustomData(eventId: 1, studentId: 8, dataJson: "{\"snack\": \"Chips\", \"allergies\": \"None\"}")
+  updateStudentProfile(studentId: 19, dataJson: "{\"allergies\": \"Peanuts\", \"contactName\": \"Mom\"}")
 }
 ```
 
